@@ -29,11 +29,7 @@ local function setup_with(result, exec_failure, options)
   return given, logged
 end
 
-local function expect(name, actual, wanted)
-  if actual ~= wanted then
-    error(name .. ": got " .. tostring(actual) .. ", wanted " .. tostring(wanted), 2)
-  end
-end
+local expect = dofile("lua-tests/support/expect.lua")
 
 loader()
 expect("loading the file alone asks pwe nothing", asked, nil)

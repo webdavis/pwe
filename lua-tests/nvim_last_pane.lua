@@ -92,11 +92,7 @@ local function press(key, pane)
   return started
 end
 
-local function expect(name, actual, wanted)
-  if actual ~= wanted then
-    error(name .. ": got " .. tostring(actual) .. ", wanted " .. tostring(wanted), 2)
-  end
-end
+local expect = dofile("lua-tests/support/expect.lua")
 
 local in_rex = { folder = "/rex/bin", session = "session:1", block = "block:a" }
 

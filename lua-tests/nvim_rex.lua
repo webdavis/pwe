@@ -74,11 +74,7 @@ local function run_scheduled()
   scheduled = {}
 end
 
-local function expect(name, actual, wanted)
-  if actual ~= wanted then
-    error(name .. ": got " .. tostring(actual) .. ", wanted " .. tostring(wanted), 2)
-  end
-end
+local expect = dofile("lua-tests/support/expect.lua")
 
 local accepted = "HTTP/1.1 101 Switching Protocols\r\n\r\n"
 local welcome = "\129\009<welcome>"

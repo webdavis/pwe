@@ -60,11 +60,7 @@ local function fresh()
   )
 end
 
-local function expect(name, actual, wanted)
-  if actual ~= wanted then
-    error(name .. ": got " .. tostring(actual) .. ", wanted " .. tostring(wanted), 2)
-  end
-end
+local expect = dofile("lua-tests/support/expect.lua")
 
 local watching = fresh()
 expect("nothing starts until a key is pressed", #started, 0)

@@ -35,19 +35,8 @@ local function press(key, over_vim)
   return handled, moved
 end
 
-local function expect(name, actual, wanted)
-  if actual ~= wanted then
-    error(name .. ": got " .. tostring(actual) .. ", wanted " .. tostring(wanted), 2)
-  end
-end
-
-local function count(list)
-  local total = 0
-  for _ in pairs(list) do
-    total = total + 1
-  end
-  return total
-end
+local expect = dofile("lua-tests/support/expect.lua")
+local count = dofile("lua-tests/support/count.lua")
 
 local directions = { ["ctrl+h"] = "left", ["ctrl+j"] = "down", ["ctrl+k"] = "up", ["ctrl+l"] = "right" }
 

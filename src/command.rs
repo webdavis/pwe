@@ -14,8 +14,8 @@ Usage:
 
 Examples:
   pwe rex get loader > ~/.config/rex/pwe.lua
+  echo 'require(\"pwe\").setup()' >> ~/.config/rex/init.lua
   pwe rex get config | less
-  pwe rex get loader --help
 ";
 
 #[derive(Debug, PartialEq)]
@@ -58,7 +58,7 @@ impl Command for Commands<'_> {
                 .ok_or_else(|| {
                     Failure::Runtime("pwe: cannot tell where it is installed\n".to_string())
                 }),
-            ["rex", "get", "config"] => Ok(self.rex.config().to_string()),
+            ["rex", "get", "config"] => Ok(self.rex.config()),
             _ => Err(Failure::Usage(format!(
                 "pwe: unknown command \"{}\"\nRun: pwe help\n",
                 words.join(" ")

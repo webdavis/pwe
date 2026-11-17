@@ -1,19 +1,12 @@
-local bindings = {}
-local foreground
+local bindings
+local vim_in_front
 local moved
+local watched
 
 rex = {
   bind = function(key, target)
     bindings[key] = target
   end,
-  block = {
-    call = function(creator, method, arguments)
-      assert(creator == "com.superlogical.terminal", "asked " .. tostring(creator))
-      assert(method == "process", "called " .. tostring(method))
-      assert(arguments.block_id == "block:pressed", "asked about " .. tostring(arguments.block_id))
-      return { foreground = foreground }
-    end,
-  },
   session = {
     focus_direction = function(arguments)
       moved = arguments
@@ -21,10 +14,19 @@ rex = {
   },
 }
 
-dofile("rex/navigate.lua")
+local function bind_with(options)
+  bindings = {}
+  watched = 0
+  assert(loadfile("rex/navigate.lua"))(options, function()
+    watched = watched + 1
+  end, function(context)
+    assert(context.block_id == "block:pressed", "asked about " .. tostring(context.block_id))
+    return vim_in_front
+  end)
+end
 
-local function press(key, program_in_front)
-  foreground = program_in_front
+local function press(key, over_vim)
+  vim_in_front = over_vim
   moved = nil
   local handled = bindings[key]({ block_id = "block:pressed", session_id = "session:pressed" })
   return handled, moved
@@ -36,36 +38,40 @@ local function expect(name, actual, wanted)
   end
 end
 
+local function count(list)
+  local total = 0
+  for _ in pairs(list) do
+    total = total + 1
+  end
+  return total
+end
+
 local directions = { ["ctrl+h"] = "left", ["ctrl+j"] = "down", ["ctrl+k"] = "up", ["ctrl+l"] = "right" }
 
+bind_with({})
+
 for key, direction in pairs(directions) do
-  local handled, move = press(key, { name = "zsh", argv0 = "-zsh" })
+  local handled, move = press(key, false)
   expect(key .. " over a shell is handled", handled, true)
   expect(key .. " over a shell moves", move and move.direction, direction)
   expect(key .. " moves in the pressed session", move and move.session_id, "session:pressed")
   expect(key .. " stops at the outer edge", move and move.wrap, false)
+
+  handled, move = press(key, true)
+  expect(key .. " over Vim is passed on", handled, false)
+  expect(key .. " over Vim moves nothing", move, nil)
 end
 
-for key in pairs(directions) do
-  local handled, move = press(key, { name = "nvim", argv0 = "nvim" })
-  expect(key .. " over Neovim is passed on", handled, false)
-  expect(key .. " over Neovim moves nothing", move, nil)
-end
+bind_with({})
+press("ctrl+h", false)
+press("ctrl+l", true)
+expect("every press lets the pane watcher start", watched, 2)
 
-local handled, move = press("ctrl+h", { name = "vim", argv0 = "/usr/bin/vim" })
-expect("Vim by name is passed on", handled, false)
-expect("Vim by name moves nothing", move, nil)
-
-handled, move = press("ctrl+h", { name = "editor", argv0 = "/opt/homebrew/bin/nvim" })
-expect("Neovim started under another name is passed on", handled, false)
-expect("Neovim started under another name moves nothing", move, nil)
-
-handled, move = press("ctrl+l", nil)
-expect("a pane reporting no program is handled", handled, true)
-expect("a pane reporting no program moves", move and move.direction, "right")
-
-handled, move = press("ctrl+l", { name = "notvim", argv0 = "/usr/local/bin/notvim" })
-expect("a program whose name only contains vim is handled", handled, true)
-expect("a program whose name only contains vim moves", move and move.direction, "right")
+bind_with({ keys = { left = "alt+h", down = false } })
+expect("a key the user chose replaces the usual one", bindings["ctrl+h"], nil)
+local _, move = press("alt+h", false)
+expect("the chosen key moves the same way", move and move.direction, "left")
+expect("a key the user turned off is not bound", bindings["ctrl+j"], nil)
+expect("the other keys keep their usual place", count(bindings), 3)
 
 print("rex navigate: ok")

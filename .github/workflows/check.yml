@@ -25,6 +25,6 @@ jobs:
             ~/.rustup/toolchains/1.*
             target
           key: ${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock', '.github/workflows/check.yml') }}
-      - run: brew install just
+      - run: brew install just luajit
       - run: just check
       - run: cargo test --locked

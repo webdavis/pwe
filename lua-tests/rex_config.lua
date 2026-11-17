@@ -35,11 +35,7 @@ local function keys_with(options)
   return table.concat(keys, " ")
 end
 
-local function expect(name, actual, wanted)
-  if actual ~= wanted then
-    error(name .. ": got " .. tostring(actual) .. ", wanted " .. tostring(wanted), 2)
-  end
-end
+local expect = dofile("lua-tests/support/expect.lua")
 
 expect(
   "the config binds the four moves, the last pane, and the key Neovim sends back",

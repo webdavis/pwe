@@ -103,8 +103,14 @@ local function call(method, payload, otherwise)
   if connection then
     return table.insert(connection.waiting, waiting)
   end
-  connection = { pipe = vim.uv.new_pipe(false), waiting = { waiting }, buffer = "" }
-  connect(connection, path)
+  local opening = { pipe = vim.uv.new_pipe(false), waiting = { waiting }, buffer = "" }
+  connection = opening
+  vim.defer_fn(function()
+    if not opening.ready then
+      drop(opening)
+    end
+  end, 1000)
+  connect(opening, path)
 end
 
 return { call = call }

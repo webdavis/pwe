@@ -37,3 +37,24 @@ fn each_lua_source_in_the_config_stays_inside_its_own_string() {
     );
     assert!(sources.ends_with("\" }"), "{sources}");
 }
+
+#[test]
+fn every_part_the_config_loads_is_packed_into_it() {
+    let config = EmbeddedRexConfig.config();
+    let packed = config.lines().next().unwrap();
+    let loads = include_str!("../../rex/config.lua");
+    let names: Vec<&str> = loads
+        .split("part(\"")
+        .skip(1)
+        .chain(loads.split("sources.").skip(1))
+        .map(|rest| {
+            rest.split(|letter: char| !letter.is_alphanumeric() && letter != '_')
+                .next()
+                .unwrap()
+        })
+        .collect();
+    assert!(names.len() >= 6, "{names:?}");
+    for name in names {
+        assert!(packed.contains(&format!(" {name} = \"")), "{name}");
+    }
+}

@@ -46,11 +46,7 @@ local function focus(session, block)
   handlers.session_view_changed({ session_id = session })
 end
 
-local function expect(name, actual, wanted)
-  if actual ~= wanted then
-    error(name .. ": got " .. tostring(actual) .. ", wanted " .. tostring(wanted), 2)
-  end
-end
+local expect = dofile("lua-tests/support/expect.lua")
 
 local function recorded()
   return table.concat(kept, ", ")

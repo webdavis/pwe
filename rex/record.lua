@@ -15,10 +15,12 @@ local function read()
 end
 
 local function write(panes)
-  local file = io.open(path, "w")
+  local unfinished = path .. ".new"
+  local file = io.open(unfinished, "w")
   if file then
     file:write(table.concat(panes, "\n"), "\n")
     file:close()
+    os.rename(unfinished, path)
   end
 end
 

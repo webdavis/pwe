@@ -55,19 +55,8 @@ local function press(key, splits, rex_folder)
   return window, started and table.concat(started, " ")
 end
 
-local function expect(name, actual, wanted)
-  if actual ~= wanted then
-    error(name .. ": got " .. tostring(actual) .. ", wanted " .. tostring(wanted), 2)
-  end
-end
-
-local function count(list)
-  local total = 0
-  for _ in pairs(list) do
-    total = total + 1
-  end
-  return total
-end
+local expect = dofile("lua-tests/support/expect.lua")
+local count = dofile("lua-tests/support/count.lua")
 
 local directions = { h = "left", j = "down", k = "up", l = "right" }
 

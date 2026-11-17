@@ -18,11 +18,7 @@ local function in_front(program)
   return vim_is_in_front({ block_id = "block:pressed" })
 end
 
-local function expect(name, actual, wanted)
-  if actual ~= wanted then
-    error(name .. ": got " .. tostring(actual) .. ", wanted " .. tostring(wanted), 2)
-  end
-end
+local expect = dofile("lua-tests/support/expect.lua")
 
 expect("Neovim is in front", in_front({ name = "nvim", argv0 = "nvim" }), true)
 expect("Vim by name is in front", in_front({ name = "vim", argv0 = "/usr/bin/vim" }), true)

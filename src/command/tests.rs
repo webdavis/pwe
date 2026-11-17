@@ -71,6 +71,9 @@ fn help_is_printed_on_request_at_every_depth() {
         &["rex", "--help"],
         &["rex", "get", "-h"],
         &["rex", "get", "loader", "--help"],
+        &["-h", "rex"],
+        &["rex", "--help", "get"],
+        &["nonsense", "-h", "more"],
     ] {
         let help =
             run(arguments, None).unwrap_or_else(|failure| panic!("{arguments:?}: {failure:?}"));

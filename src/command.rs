@@ -51,7 +51,8 @@ impl Command for Commands<'_> {
     fn run(&self, arguments: &[String], pwe: Option<&Path>) -> Result<String, Failure> {
         let words: Vec<&str> = arguments.iter().map(String::as_str).collect();
         match words.as_slice() {
-            [] | ["help", ..] | [.., "-h" | "--help"] => Ok(HELP.to_string()),
+            [] | ["help", ..] => Ok(HELP.to_string()),
+            _ if words.iter().any(|word| matches!(*word, "-h" | "--help")) => Ok(HELP.to_string()),
             ["rex", "get", "loader"] => pwe
                 .and_then(Path::to_str)
                 .map(|pwe| self.rex.loader(pwe))

@@ -5,6 +5,7 @@ local websocket = require("pwe.websocket")
 local pipes
 local connect_failure
 local scheduled
+local timers
 
 local function new_pipe()
   local pipe = { written = {} }
@@ -47,6 +48,9 @@ vim = {
   schedule = function(action)
     scheduled[#scheduled + 1] = action
   end,
+  defer_fn = function(action, milliseconds)
+    timers[#timers + 1] = { ring = action, after = milliseconds }
+  end,
 }
 
 local function fresh(server)
@@ -54,6 +58,7 @@ local function fresh(server)
   pipes = {}
   connect_failure = nil
   scheduled = {}
+  timers = {}
   vim.env.REX_SERVER = server
   return require("pwe.rex")
 end
@@ -179,5 +184,29 @@ rex = fresh("tcp://elsewhere:7000")
 ran, otherwise = fallbacks()
 rex.call("client.key", {}, otherwise("not local"))
 expect("an address that is not a local socket falls back", ran[1], "not local")
+
+rex = fresh("unix:///run/rex.sock")
+ran, otherwise = fallbacks()
+rex.call("client.key", {}, otherwise("never granted"))
+pipes[1].receive(accepted)
+pipes[1].receive(welcome)
+expect("a new connection is given one second to be granted", timers[1] and timers[1].after, 1000)
+timers[1].ring()
+run_scheduled()
+expect("a call still waiting when the second is up falls back", ran[1], "never granted")
+expect("the connection that was never granted is closed", pipes[1].closed, true)
+rex.call("client.key", {}, otherwise("after"))
+expect("the call after it opens a new connection", #pipes, 2)
+
+rex = fresh("unix:///run/rex.sock")
+ran, otherwise = fallbacks()
+rex.call("client.key", {}, otherwise("granted in time"))
+pipes[1].receive(accepted)
+pipes[1].receive(welcome)
+pipes[1].receive('\129\015{"id":"attach"}')
+timers[1].ring()
+run_scheduled()
+expect("a connection granted in time stays open when the second is up", pipes[1].closed, nil)
+expect("and its call does not fall back", #ran, 0)
 
 print("nvim rex: ok")

@@ -4,18 +4,23 @@ local watched
 local kept
 local vim_in_front
 local focused
-local focus_failure
 local performed
 local asked
 
+local gone
+
 local store = {
   read = function()
-    return kept.current, kept.previous
+    return kept
   end,
-  write = function(current, previous)
-    kept = { current = current, previous = previous }
+  write = function(panes)
+    kept = panes
   end,
 }
+
+local function recorded()
+  return table.concat(kept, ", ")
+end
 
 local views = {
   ["session:1"] = {
@@ -38,10 +43,10 @@ rex = {
   },
   session = {
     focus_block = function(arguments)
-      focused = arguments
-      if focus_failure then
-        return nil, focus_failure
+      if gone[arguments.block_id] then
+        return nil, "no such block"
       end
+      focused = arguments
       return {}
     end,
     view = function(arguments)
@@ -79,12 +84,20 @@ local from_vim = "ctrl+alt+shift+super+f20"
 
 local function press(current, previous, conditions)
   conditions = conditions or {}
-  kept = { current = current, previous = previous }
+  kept = {}
+  for _, pane in ipairs({ current or "", previous or "", unpack(conditions.older or {}) }) do
+    if pane ~= "" then
+      kept[#kept + 1] = pane
+    end
+  end
+  gone = {}
+  for _, block in ipairs(conditions.gone or {}) do
+    gone[block] = true
+  end
   tracked = not conditions.untracked and store or nil
   watched = 0
   vim_in_front = conditions.over_vim or false
   focused = nil
-  focus_failure = conditions.pane_is_gone and "no such block" or nil
   performed = nil
   asked = {}
   return bindings[conditions.key or "ctrl+\\"]({
@@ -106,8 +119,7 @@ expect("the key is handled", press("session:1 block:a", "session:1 block:b"), tr
 expect("it goes to the pane before this one", focused and focused.block_id, "block:b")
 expect("it names that pane's session", focused and focused.session_id, "session:1")
 expect("a pane in the same tab asks no client for anything", performed, nil)
-expect("the pane gone to becomes the current one", kept.current, "session:1 block:b")
-expect("the pane left becomes the one before, so the key goes back", kept.previous, "session:1 block:a")
+expect("the pane gone to goes first and the pane left after it, so the key goes back", recorded(), "session:1 block:b, session:1 block:a")
 
 press("session:1 block:a", "session:2 block:z", { client = "client:me" })
 expect("a pane in another session is focused there", focused and focused.session_id, "session:2")
@@ -122,9 +134,12 @@ expect("the client is asked to show that session", performed and performed.args.
 expect("at the tab the pane is in", performed and performed.args.window_id, "window:tab2")
 
 press("session:2 block:z", "session:3 block:q")
-expect("when the record is behind, its current pane is the one before this", focused and focused.block_id, "block:z")
-expect("the record then names the pane gone to", kept.current, "session:2 block:z")
-expect("and this pane as the one before", kept.previous, "session:1 block:a")
+expect("when the record is behind, its newest pane is the one before this", focused and focused.block_id, "block:z")
+expect(
+  "the record then lists the pane gone to, this pane, and the older ones",
+  recorded(),
+  "session:2 block:z, session:1 block:a, session:3 block:q"
+)
 
 expect("with no pane before, the key is still handled", press("session:1 block:a", ""), true)
 expect("with no pane before, nothing is focused", focused, nil)
@@ -139,9 +154,14 @@ expect(
 )
 expect("when panes are not tracked, nothing is focused", focused, nil)
 
-press("session:1 block:a", "session:2 block:closed", { pane_is_gone = true, client = "client:me" })
-expect("a pane that is gone leaves the record alone", kept.previous, "session:2 block:closed")
-expect("a pane that is gone switches no session", performed, nil)
+press("session:1 block:a", "session:1 block:closed", { gone = { "block:closed" }, older = { "session:1 block:b" } })
+expect("when the pane before was closed, it goes to the one before that", focused and focused.block_id, "block:b")
+expect("the closed pane is forgotten", recorded(), "session:1 block:b, session:1 block:a")
+
+press("session:1 block:a", "session:2 block:closed", { gone = { "block:closed" }, client = "client:me" })
+expect("when every earlier pane was closed, nothing is focused", focused, nil)
+expect("when every earlier pane was closed, no client is asked", performed, nil)
+expect("and only this pane stays recorded", recorded(), "session:1 block:a")
 
 bind_with({})
 expect(

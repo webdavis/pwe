@@ -10,12 +10,20 @@ end
 local from_vim = "ctrl+alt+shift+super+f20"
 local clients = {}
 
-local function pane_before(store, here)
-  local current, previous = store.read()
-  local before = current ~= here and current or previous
-  if before and before ~= here then
-    return before, before:match("^(%S+) (%S+)$")
+local function focus_the_newest_open(panes, here)
+  local older = {}
+  local reached
+  for _, pane in ipairs(panes) do
+    if pane ~= here then
+      local session, block = pane:match("^(%S+) (%S+)$")
+      if reached then
+        older[#older + 1] = pane
+      elseif session and rex.session.focus_block({ session_id = session, block_id = block }) then
+        reached = { pane = pane, session = session, block = block }
+      end
+    end
   end
+  return reached, older
 end
 
 local function window_of(session, block)
@@ -55,11 +63,12 @@ local function go_back(context, client)
     return
   end
   local here = context.session_id .. " " .. context.block_id
-  local before, session, block = pane_before(store, here)
-  if not session or not rex.session.focus_block({ session_id = session, block_id = block }) then
-    return
+  local reached, older = focus_the_newest_open(store.read(), here)
+  if not reached then
+    return store.write({ here })
   end
-  store.write(before, here)
+  store.write({ reached.pane, here, unpack(older) })
+  local session, block = reached.session, reached.block
   local window = window_of(session, block)
   if session ~= context.session_id or window ~= window_of(context.session_id, context.block_id) then
     show(client, session, window)

@@ -5,10 +5,10 @@ local stopped
 
 store = {
   read = function()
-    return kept.current, kept.previous
+    return kept
   end,
-  write = function(current, previous)
-    kept = { current = current, previous = previous }
+  write = function(panes)
+    kept = panes
   end,
   remove = function()
     kept = nil
@@ -52,25 +52,45 @@ local function expect(name, actual, wanted)
   end
 end
 
-focus("session:1", "block:a")
-expect("the first pane seen is the current one", kept.current, "session:1 block:a")
-expect("the first pane seen has none before it", kept.previous, nil)
+local function recorded()
+  return table.concat(kept, ", ")
+end
 
 focus("session:1", "block:a")
-expect("a change that keeps the pane keeps the record", kept.current, "session:1 block:a")
-expect("a change that keeps the pane keeps what came before", kept.previous, nil)
+expect("the first pane seen is the only one recorded", recorded(), "session:1 block:a")
+
+focus("session:1", "block:a")
+expect("a change that keeps the pane keeps the record", recorded(), "session:1 block:a")
 
 focus("session:1", "block:b")
-expect("the pane of the front window becomes the current one", kept.current, "session:1 block:b")
-expect("the pane left behind becomes the one before", kept.previous, "session:1 block:a")
+expect("the pane of the front window goes first, the one left after it", recorded(), "session:1 block:b, session:1 block:a")
 
 focus("session:2", "block:z")
-expect("a pane in another session becomes the current one", kept.current, "session:2 block:z")
-expect("the pane left in the first session becomes the one before", kept.previous, "session:1 block:b")
+expect(
+  "a pane in another session goes first, and the earlier ones stay in order",
+  recorded(),
+  "session:2 block:z, session:1 block:b, session:1 block:a"
+)
+
+focus("session:1", "block:a")
+expect(
+  "a pane seen again moves to the front and is listed once",
+  recorded(),
+  "session:1 block:a, session:2 block:z, session:1 block:b"
+)
 
 handlers.session_view_changed({ session_id = "session:gone" })
-expect("a session that cannot be read changes nothing", kept.current, "session:2 block:z")
-expect("a session that cannot be read keeps what came before", kept.previous, "session:1 block:b")
+expect(
+  "a session that cannot be read changes nothing",
+  recorded(),
+  "session:1 block:a, session:2 block:z, session:1 block:b"
+)
+
+for number = 1, 30 do
+  focus("session:3", "block:" .. number)
+end
+expect("only the twenty most recent panes are kept", #kept, 20)
+expect("the newest of them is first", kept[1], "session:3 block:30")
 
 handlers.keymap_changed({})
 expect("a config reload ends this watcher", stopped, true)

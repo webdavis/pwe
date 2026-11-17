@@ -55,7 +55,7 @@ local function fresh()
   logged = nil
   first_recorded = nil
   return assert(loadfile("rex/watch.lua"))(
-    "local at = ... return { kept_at = at, write = function(pane) first_recorded = pane end }",
+    "local at = ... return { kept_at = at, write = function(panes) first_recorded = table.concat(panes, ', ') end }",
     "store_the_watcher_got = store"
   )
 end

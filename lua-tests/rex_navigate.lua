@@ -1,11 +1,13 @@
 local bindings
+local written
 local vim_in_front
 local moved
 local watched
 
 rex = {
-  bind = function(key, target)
+  bind = function(key, target, arguments)
     bindings[key] = target
+    written[key] = arguments and arguments.data
   end,
   session = {
     focus_direction = function(arguments)
@@ -16,6 +18,7 @@ rex = {
 
 local function bind_with(options)
   bindings = {}
+  written = {}
   watched = 0
   assert(loadfile("rex/navigate.lua"))(options, function()
     watched = watched + 1
@@ -73,5 +76,20 @@ local _, move = press("alt+h", false)
 expect("the chosen key moves the same way", move and move.direction, "left")
 expect("a key the user turned off is not bound", bindings["ctrl+j"], nil)
 expect("the other keys keep their usual place", count(bindings), 3)
+
+bind_with({ send_after = "ctrl+d" })
+local characters = { ["ctrl+h"] = "\8", ["ctrl+j"] = "\10", ["ctrl+k"] = "\11", ["ctrl+l"] = "\12" }
+for key, character in pairs(characters) do
+  local sequence = "ctrl+d>" .. key
+  expect(sequence .. " writes to the program", bindings[sequence], "com.superlogical.terminal.write")
+  expect(sequence .. " writes the character " .. key .. " stands for", written[sequence], character)
+end
+expect("the four moves stay bound beside the four sequences", count(bindings), 8)
+
+bind_with({ send_after = "ctrl+d", keys = { left = "alt+h", down = false, up = "ctrl+shift+k", right = "ctrl+P" } })
+expect("a chosen key that stands for no character gets no sequence", bindings["ctrl+d>alt+h"], nil)
+expect("a key with more than control held gets no sequence", bindings["ctrl+d>ctrl+shift+k"], nil)
+expect("a key the user turned off gets no sequence", bindings["ctrl+d>ctrl+j"], nil)
+expect("a chosen control key writes its own character", written["ctrl+d>ctrl+P"], "\16")
 
 print("rex navigate: ok")

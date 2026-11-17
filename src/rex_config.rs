@@ -3,7 +3,7 @@ mod tests;
 
 pub trait RexConfig {
     fn loader(&self, pwe: &str) -> String;
-    fn config(&self) -> &str;
+    fn config(&self) -> String;
 }
 
 pub struct EmbeddedRexConfig;
@@ -17,8 +17,17 @@ impl RexConfig for EmbeddedRexConfig {
         )
     }
 
-    fn config(&self) -> &str {
-        include_str!("../rex/navigate.lua")
+    fn config(&self) -> String {
+        format!(
+            "local sources = {{ watch = {}, record = {}, front = {}, navigate = {}, last_pane = {}, watcher = {} }}\n{}",
+            lua_string(include_str!("../rex/watch.lua")),
+            lua_string(include_str!("../rex/record.lua")),
+            lua_string(include_str!("../rex/front.lua")),
+            lua_string(include_str!("../rex/navigate.lua")),
+            lua_string(include_str!("../rex/last_pane.lua")),
+            lua_string(include_str!("../rex/watcher.lua")),
+            include_str!("../rex/config.lua")
+        )
     }
 }
 

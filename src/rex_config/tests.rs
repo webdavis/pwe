@@ -26,3 +26,14 @@ fn a_path_with_a_line_break_stays_on_one_line() {
         "{loader}"
     );
 }
+
+#[test]
+fn each_lua_source_in_the_config_stays_inside_its_own_string() {
+    let config = EmbeddedRexConfig.config();
+    let sources = config.lines().next().unwrap();
+    assert!(
+        sources.starts_with("local sources = { watch = \""),
+        "{sources}"
+    );
+    assert!(sources.ends_with("\" }"), "{sources}");
+}

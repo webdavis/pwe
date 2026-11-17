@@ -5,6 +5,4 @@ check:
     cargo fmt --check
     cargo clippy --all-targets -- -D warnings
     cargo test --bins
-    luajit lua-tests/rex_navigate.lua
-    luajit lua-tests/rex_loader.lua
-    luajit lua-tests/nvim_navigate.lua
+    for test in lua-tests/*.lua; do luajit "$test" || exit 1; done

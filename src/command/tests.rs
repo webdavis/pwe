@@ -9,8 +9,8 @@ impl RexConfig for FakeConfig {
         format!("loader for {pwe}")
     }
 
-    fn config(&self) -> &str {
-        "the config"
+    fn config(&self) -> String {
+        "the config".to_string()
     }
 }
 

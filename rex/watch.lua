@@ -36,7 +36,7 @@ return function(context)
   if store == nil then
     local started, failure = start()
     if started then
-      started.write(context.session_id .. " " .. context.block_id)
+      started.write({ context.session_id .. " " .. context.block_id })
     else
       print("pwe: the last pane is not tracked: " .. tostring(failure))
     end

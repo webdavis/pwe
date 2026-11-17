@@ -6,6 +6,8 @@ local function focused_block(view)
   end
 end
 
+local most_kept = 20
+
 rex.on("session_view_changed", function(context)
   local view = rex.session.view({ session_id = context.session_id })
   local block = view and focused_block(view)
@@ -13,10 +15,17 @@ rex.on("session_view_changed", function(context)
     return
   end
   local now = context.session_id .. " " .. block
-  local before = store.read()
-  if now ~= before then
-    store.write(now, before)
+  local panes = store.read()
+  if panes[1] == now then
+    return
   end
+  local kept = { now }
+  for _, pane in ipairs(panes) do
+    if pane ~= now and #kept < most_kept then
+      kept[#kept + 1] = pane
+    end
+  end
+  store.write(kept)
 end)
 
 rex.on("keymap_changed", function()

@@ -6,6 +6,7 @@ local vim_in_front
 local focused
 local focus_failure
 local performed
+local asked
 
 local store = {
   read = function()
@@ -16,10 +17,25 @@ local store = {
   end,
 }
 
+local views = {
+  ["session:1"] = {
+    windows = {
+      { window_id = "window:front", blocks = "block:a block:b" },
+      { window_id = "window:tab2", blocks = "block:t" },
+    },
+  },
+  ["session:2"] = { windows = { { window_id = "window:z", blocks = "block:z" } } },
+}
+
 rex = {
   bind = function(key, target)
     bindings[key] = target
   end,
+  json = {
+    encode = function(window)
+      return window.blocks
+    end,
+  },
   session = {
     focus_block = function(arguments)
       focused = arguments
@@ -28,10 +44,23 @@ rex = {
       end
       return {}
     end,
+    view = function(arguments)
+      return views[arguments.session_id]
+    end,
   },
   call = function(method, arguments)
+    if method == "client.list" then
+      return {
+        clients = {
+          { client_id = "client:cli", info = { kind = "cli" } },
+          { client_id = "client:app", info = { kind = "app" } },
+          { client_id = "client:nameless" },
+        },
+      }
+    end
     assert(method == "client.perform", "called " .. tostring(method))
     performed = arguments
+    asked[#asked + 1] = arguments.client_id
     return {}
   end,
 }
@@ -57,6 +86,7 @@ local function press(current, previous, conditions)
   focused = nil
   focus_failure = conditions.pane_is_gone and "no such block" or nil
   performed = nil
+  asked = {}
   return bindings[conditions.key or "ctrl+\\"]({
     session_id = "session:1",
     block_id = "block:a",
@@ -75,7 +105,7 @@ bind_with({})
 expect("the key is handled", press("session:1 block:a", "session:1 block:b"), true)
 expect("it goes to the pane before this one", focused and focused.block_id, "block:b")
 expect("it names that pane's session", focused and focused.session_id, "session:1")
-expect("a pane in the same session needs no session switch", performed, nil)
+expect("a pane in the same tab asks no client for anything", performed, nil)
 expect("the pane gone to becomes the current one", kept.current, "session:1 block:b")
 expect("the pane left becomes the one before, so the key goes back", kept.previous, "session:1 block:a")
 
@@ -84,6 +114,12 @@ expect("a pane in another session is focused there", focused and focused.session
 expect("the client that pressed the key is asked", performed and performed.client_id, "client:me")
 expect("it is asked to show a session", performed and performed.action, "session.select")
 expect("it is asked for the other session", performed and performed.args.session_id, "session:2")
+expect("and for the tab the pane is in", performed and performed.args.window_id, "window:z")
+
+press("session:1 block:a", "session:1 block:t", { client = "client:me" })
+expect("a pane in another tab of the same session is focused", focused and focused.block_id, "block:t")
+expect("the client is asked to show that session", performed and performed.args.session_id, "session:1")
+expect("at the tab the pane is in", performed and performed.args.window_id, "window:tab2")
 
 press("session:2 block:z", "session:3 block:q")
 expect("when the record is behind, its current pane is the one before this", focused and focused.block_id, "block:z")
@@ -131,7 +167,7 @@ expect(
 bind_with({})
 press("session:1 block:a", "session:2 block:z", { key = from_vim, client = "client:neovim" })
 expect("with no client known, the pane is still focused", focused and focused.block_id, "block:z")
-expect("with no client known, no session switch is asked", performed, nil)
+expect("with no client known, every app is asked and nothing else", table.concat(asked, " "), "client:app")
 
 bind_with({ keys = { last = "alt+tab" } })
 expect("a key the user chose replaces the usual one", bindings["ctrl+\\"], nil)

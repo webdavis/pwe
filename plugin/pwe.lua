@@ -1,0 +1,1 @@
+require("pwe.navigate").setup()

@@ -12,8 +12,8 @@ local started
 local maps
 local events
 local window
-local window_before
 local floating
+local closed
 
 local function happen(event)
   for _, callback in ipairs(events[event] or {}) do
@@ -36,15 +36,6 @@ vim = {
       maps[key] = { modes = table.concat(modes, " "), action = action }
     end,
   },
-  fn = {
-    winnr = function(which)
-      assert(which == "#", "asked for window " .. tostring(which))
-      return window_before
-    end,
-    win_getid = function(number)
-      return number == 0 and 0 or number + 1000
-    end,
-  },
   cmd = {
     wincmd = function() end,
   },
@@ -57,14 +48,17 @@ vim = {
       table.insert(events[event], options.callback)
     end,
     nvim_get_current_win = function()
-      return window + 1000
+      return window
     end,
     nvim_set_current_win = function(id)
-      window, window_before = id - 1000, window
+      window = id
       happen("WinEnter")
     end,
     nvim_win_get_config = function()
-      return { relative = floating and "editor" or "" }
+      return { relative = floating[window] and "editor" or "" }
+    end,
+    nvim_win_is_valid = function(id)
+      return not closed[id]
     end,
   },
 }
@@ -72,7 +66,7 @@ vim = {
 local function setup(options)
   maps = {}
   events = {}
-  window, window_before, floating = 1, 0, false
+  window, floating, closed = 1, {}, {}
   for _, name in ipairs({ "pwe", "pwe.navigate", "pwe.last_pane" }) do
     package.loaded[name] = nil
   end
@@ -80,9 +74,15 @@ local function setup(options)
 end
 
 local function enter(split)
-  window, window_before = split, window
+  window = split
   happen("WinEnter")
 end
+
+local function enter_floating(popup)
+  floating[popup] = true
+  enter(popup)
+end
+
 local function press(key, pane)
   started = nil
   vim.env.REX_BIN_DIR = pane and pane.folder
@@ -139,6 +139,19 @@ press("<C-\\>", in_rex)
 expect("pressed again it returns to the split it left", window, 2)
 
 setup()
+enter_floating(9)
+enter(2)
+expect("after a popup opened the new split, it starts nothing", press("<C-\\>", in_rex), nil)
+expect("it goes back to the split before the popup, never to the popup", window, 1)
+
+setup()
+enter(2)
+enter_floating(9)
+enter(2)
+press("<C-\\>", in_rex)
+expect("a popup that came and went leaves the split before as it was", window, 1)
+
+setup()
 enter(2)
 happen("FocusLost")
 expect("after Neovim lost focus to another pane it asks Rex", press("<C-\\>", in_rex) ~= nil, true)
@@ -147,22 +160,34 @@ expect("after Neovim lost focus the split stays", window, 2)
 setup()
 enter(2)
 maps["<C-l>"].action()
-expect("after a move out of Neovim's last split it asks Rex", press("<C-\\>", in_rex) ~= nil, true)
+expect("a move key at the outer edge, where nothing moves, starts nothing on ctrl-\\", press("<C-\\>", nil), nil)
+expect("and ctrl-\\ still goes to the split before", window, 1)
 
 setup()
 enter(2)
-press("<C-\\>", in_rex)
-window_before = 0
+closed[1] = true
 expect("with the split before closed it asks Rex", press("<C-\\>", in_rex) ~= nil, true)
 
 setup()
-floating = true
-enter(2)
-expect("a floating window does not count as a split", press("<C-\\>", in_rex) ~= nil, true)
+expect("with one split only it asks Rex", press("<C-\\>", in_rex) ~= nil, true)
 
 setup()
 enter(2)
 expect("outside Rex it still goes back to the split before", press("<C-\\>", nil), nil)
 expect("outside Rex the split changes", window, 1)
+
+setup({ last_goes_to = "pane" })
+enter(2)
+expect("told to go to panes only, it asks Rex after a move between splits", press("<C-\\>", in_rex) ~= nil, true)
+expect("told to go to panes only, the split stays", window, 2)
+
+setup({ last_goes_to = "split" })
+enter(2)
+happen("FocusLost")
+expect("told to stay in Neovim, it goes to the other split even after focus was lost", press("<C-\\>", in_rex), nil)
+expect("told to stay in Neovim, the split changes", window, 1)
+
+setup({ last_goes_to = "split" })
+expect("told to stay in Neovim with one split only, it asks Rex", press("<C-\\>", in_rex) ~= nil, true)
 
 print("nvim last pane: ok")

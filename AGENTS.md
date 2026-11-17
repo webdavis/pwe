@@ -9,7 +9,7 @@
 - Change only what the task asks. Fix the code, not the test or check that caught it. Changing a wrong test needs the owner's yes.
 - Call a feature done only with the output of the command that proves it, run against the built program. When the proof needs Rex, say so, show the output up to the Rex connection, and call it done only after the owner has used it.
 - After the merge, give the owner the install command. The next feature starts when he says he used this one.
-- Run `just check` before every push. CI runs it too, with `cargo test` in place of `cargo test --bins`.
+- Run `just check` before every push.
 - On a warm build `just check` takes under 10 seconds and CI under 2 minutes. Report an overrun; never fix one by removing a test or check.
 - Delete unused code; never silence the warning.
 - After each feature, report the time from go to done, production lines, test lines, tests in `tests/`, and outside packages. Report the time to first use when the owner says he used it.

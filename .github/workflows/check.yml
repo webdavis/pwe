@@ -1,0 +1,30 @@
+name: check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.rustup/toolchains/1.*
+            target
+          key: ${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock', '.github/workflows/check.yml') }}
+      - run: brew install just
+      - run: just check
+      - run: cargo test --locked

@@ -1,25 +1,37 @@
 local rex = require("pwe.rex")
 
+local most_kept = 20
 local split_was_last = false
-local split_here
-local split_left
+local windows = {}
 
 local function left_neovim()
   split_was_last = false
 end
 
-local function entered_a_window()
+local function entered_a_window(includes_popups)
   local entered = vim.api.nvim_get_current_win()
-  if entered == split_here or vim.api.nvim_win_get_config(0).relative ~= "" then
+  if entered == windows[1] then
     return
   end
-  split_left, split_here = split_here, entered
+  if not includes_popups and vim.api.nvim_win_get_config(0).relative ~= "" then
+    return
+  end
+  local kept = { entered }
+  for _, window in ipairs(windows) do
+    if window ~= entered and #kept < most_kept and vim.api.nvim_win_is_valid(window) then
+      kept[#kept + 1] = window
+    end
+  end
+  windows = kept
   split_was_last = true
 end
 
 local function split_before()
-  if split_left and split_left ~= vim.api.nvim_get_current_win() and vim.api.nvim_win_is_valid(split_left) then
-    return split_left
+  local here = vim.api.nvim_get_current_win()
+  for _, window in ipairs(windows) do
+    if window ~= here and vim.api.nvim_win_is_valid(window) then
+      return window
+    end
   end
 end
 
@@ -54,19 +66,24 @@ local function go_back(goes_to)
   pane_before()
 end
 
-local function setup(key, modes, goes_to)
+local function setup(key, modes, goes_to, includes_popups)
   if key == nil then
     key = "<C-\\>"
   end
   if not key then
     return
   end
-  split_here = vim.api.nvim_get_current_win()
+  windows = { vim.api.nvim_get_current_win() }
   vim.keymap.set(modes, key, function()
     go_back(goes_to)
   end, { desc = "Go back to the last split or pane" })
   local group = vim.api.nvim_create_augroup("pwe_last_pane", { clear = true })
-  vim.api.nvim_create_autocmd("WinEnter", { group = group, callback = entered_a_window })
+  vim.api.nvim_create_autocmd("WinEnter", {
+    group = group,
+    callback = function()
+      entered_a_window(includes_popups)
+    end,
+  })
   vim.api.nvim_create_autocmd("FocusLost", { group = group, callback = left_neovim })
 end
 

@@ -139,17 +139,35 @@ press("<C-\\>", in_rex)
 expect("pressed again it returns to the split it left", window, 2)
 
 setup()
+enter(2)
 enter_floating(9)
 enter(2)
-expect("after a popup opened the new split, it starts nothing", press("<C-\\>", in_rex), nil)
-expect("it goes back to the split before the popup, never to the popup", window, 1)
+expect("after leaving a popup that is still open, it starts nothing", press("<C-\\>", in_rex), nil)
+expect("it goes back into the popup", window, 9)
+press("<C-\\>", in_rex)
+expect("pressed again it returns to the split", window, 2)
 
 setup()
 enter(2)
 enter_floating(9)
+closed[9] = true
 enter(2)
 press("<C-\\>", in_rex)
-expect("a popup that came and went leaves the split before as it was", window, 1)
+expect("a popup that was closed is passed over for the split before it", window, 1)
+
+setup({ last_includes_popups = false })
+enter(2)
+enter_floating(9)
+enter(2)
+press("<C-\\>", in_rex)
+expect("told to leave popups out, it goes to the split before and never the popup", window, 1)
+
+setup()
+enter(2)
+enter(3)
+closed[2] = true
+expect("with the split before closed, it starts nothing", press("<C-\\>", in_rex), nil)
+expect("and goes to the split before that", window, 1)
 
 setup()
 enter(2)

@@ -20,6 +20,7 @@
 
 - Each feature lives in its own module behind one trait that holds only the methods callers use today. Outside the feature's own module, only `main.rs` names the type behind it.
 - Write no comments, doc comments included. Names and structure are the documentation; when code needs explaining, rename or restructure it.
+- Shape every command as `pwe <noun> <verb> <target>`, and follow https://cli.style for verbs, flags, help, output and exit codes.
 
 ## Tests
 

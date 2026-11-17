@@ -18,6 +18,37 @@ local function pane_before(store, here)
   end
 end
 
+local function window_of(session, block)
+  local view = rex.session.view({ session_id = session })
+  for _, window in ipairs(view and view.windows or {}) do
+    if rex.json.encode(window):find(block, 1, true) then
+      return window.window_id
+    end
+  end
+end
+
+local function apps()
+  local listed = rex.call("client.list", {})
+  local found = {}
+  for _, client in ipairs(listed and listed.clients or {}) do
+    if client.info and client.info.kind == "app" then
+      found[#found + 1] = client.client_id
+    end
+  end
+  return found
+end
+
+local function show(client, session, window)
+  for _, asked in ipairs(client and { client } or apps()) do
+    rex.call("client.perform", {
+      client_id = asked,
+      action = "session.select",
+      args = { session_id = session, window_id = window },
+      timeout_ms = 2000,
+    })
+  end
+end
+
 local function go_back(context, client)
   local store = watching(context)
   if not store then
@@ -29,12 +60,9 @@ local function go_back(context, client)
     return
   end
   store.write(before, here)
-  if session ~= context.session_id and client then
-    rex.call("client.perform", {
-      client_id = client,
-      action = "session.select",
-      args = { session_id = session },
-    })
+  local window = window_of(session, block)
+  if session ~= context.session_id or window ~= window_of(context.session_id, context.block_id) then
+    show(client, session, window)
   end
 end
 

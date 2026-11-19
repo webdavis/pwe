@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "pwe architecture",
+    "output": ".archify/architecture.html",
+    "quality_profile": "showcase",
+    "legend": {
+      "entries": {
+        "security": {
+          "label": "Trait"
+        },
+        "backend": {
+          "label": "Type"
+        },
+        "frontend": {
+          "label": "Plain function"
+        },
+        "database": {
+          "label": "Data"
+        },
+        "external": {
+          "label": "Builds the real types"
+        }
+      }
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 7,
+    "gapX": 110,
+    "gapY": 70,
+    "cellW": 150,
+    "cellH": 60
+  },
+  "components": [
+    {
+      "id": "commands",
+      "type": "backend",
+      "label": "Commands",
+      "sublabel": "hands words to a noun",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "command",
+      "type": "security",
+      "label": "<Command>",
+      "sublabel": "one per noun",
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "rex_command",
+      "type": "backend",
+      "label": "RexCommand",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "agent_command",
+      "type": "backend",
+      "label": "AgentCommand",
+      "row": 1,
+      "col": 1
+    },
+    {
+      "id": "agent_text",
+      "type": "frontend",
+      "label": "agent_text()",
+      "sublabel": "presentation",
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "main",
+      "type": "external",
+      "label": "main.rs",
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "omp_harness",
+      "type": "backend",
+      "label": "OmpHarness",
+      "sublabel": "omp's paths and rules",
+      "row": 2,
+      "col": 1
+    },
+    {
+      "id": "rex_source",
+      "type": "backend",
+      "label": "RexStatusSource",
+      "sublabel": "later",
+      "row": 3,
+      "col": 2
+    },
+    {
+      "id": "local_disk",
+      "type": "backend",
+      "label": "LocalDisk",
+      "row": 4,
+      "col": 0
+    },
+    {
+      "id": "disk",
+      "type": "security",
+      "label": "<Disk>",
+      "sublabel": "dumb reader",
+      "row": 3,
+      "col": 0
+    },
+    {
+      "id": "programs",
+      "type": "security",
+      "label": "<Programs>",
+      "sublabel": "dumb reader",
+      "row": 3,
+      "col": 1
+    },
+    {
+      "id": "local_programs",
+      "type": "backend",
+      "label": "LocalPrograms",
+      "row": 4,
+      "col": 1
+    },
+    {
+      "id": "list",
+      "type": "frontend",
+      "label": "list()",
+      "sublabel": "joins the best answers",
+      "row": 0,
+      "col": 5
+    },
+    {
+      "id": "listing",
+      "type": "database",
+      "label": "Listing",
+      "sublabel": "agents and failures",
+      "row": 1,
+      "col": 4
+    },
+    {
+      "id": "agent",
+      "type": "database",
+      "label": "Agent, State",
+      "row": 1,
+      "col": 5
+    },
+    {
+      "id": "harness",
+      "type": "security",
+      "label": "<Harness>",
+      "sublabel": "one agent program",
+      "row": 2,
+      "col": 4
+    },
+    {
+      "id": "status_source",
+      "type": "security",
+      "label": "<StatusSource>",
+      "sublabel": "extra state source",
+      "row": 3,
+      "col": 4
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "pwe: the program package, at the repo root",
+      "wraps": [
+        "commands",
+        "command",
+        "rex_command",
+        "agent_command",
+        "agent_text",
+        "main",
+        "omp_harness",
+        "rex_source",
+        "local_disk",
+        "disk",
+        "programs",
+        "local_programs"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "engines/agent: the core package",
+      "wraps": [
+        "list",
+        "listing",
+        "agent",
+        "harness",
+        "status_source"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "commands-command",
+      "from": "commands",
+      "to": "command",
+      "label": "uses"
+    },
+    {
+      "id": "rex-implements",
+      "from": "rex_command",
+      "to": "command",
+      "label": "implements",
+      "variant": "dashed"
+    },
+    {
+      "id": "agent-implements",
+      "from": "agent_command",
+      "to": "command",
+      "label": "implements",
+      "variant": "dashed"
+    },
+    {
+      "id": "agent-text",
+      "from": "agent_command",
+      "to": "agent_text",
+      "label": "shows with"
+    },
+    {
+      "id": "text-listing",
+      "from": "agent_text",
+      "to": "listing",
+      "label": "reads"
+    },
+    {
+      "id": "omp-harness",
+      "from": "omp_harness",
+      "to": "harness",
+      "label": "implements",
+      "variant": "dashed"
+    },
+    {
+      "id": "rex-source",
+      "from": "rex_source",
+      "to": "status_source",
+      "label": "implements",
+      "variant": "dashed"
+    },
+    {
+      "id": "omp-disk",
+      "from": "omp_harness",
+      "to": "disk",
+      "label": "reads"
+    },
+    {
+      "id": "omp-programs",
+      "from": "omp_harness",
+      "to": "programs",
+      "label": "runs"
+    },
+    {
+      "id": "disk-impl",
+      "from": "local_disk",
+      "to": "disk",
+      "label": "implements",
+      "variant": "dashed"
+    },
+    {
+      "id": "programs-impl",
+      "from": "local_programs",
+      "to": "programs",
+      "label": "implements",
+      "variant": "dashed"
+    },
+    {
+      "id": "list-listing",
+      "from": "list",
+      "to": "listing",
+      "label": "returns"
+    },
+    {
+      "id": "list-harness",
+      "from": "list",
+      "to": "harness",
+      "label": "asks"
+    },
+    {
+      "id": "listing-agent",
+      "from": "listing",
+      "to": "agent",
+      "label": "holds"
+    },
+    {
+      "id": "agent-listing",
+      "from": "agent_command",
+      "to": "listing",
+      "label": "gets"
+    },
+    {
+      "id": "list-source",
+      "from": "list",
+      "to": "status_source",
+      "label": "asks"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "The core",
+      "items": [
+        "Cannot name the program: the compiler refuses",
+        "Takes every fact as a value, the time included"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Adding an agent program",
+      "items": [
+        "One new harness module",
+        "Its lines in main.rs"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "main.rs",
+      "items": [
+        "Builds the real types and hands them to each other",
+        "The only file that names them"
+      ]
+    }
+  ]
+}

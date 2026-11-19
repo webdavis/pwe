@@ -47,6 +47,7 @@ pub struct Failure {
 pub struct Listing {
     pub agents: Vec<Agent>,
     pub failures: Vec<Failure>,
+    pub now: SystemTime,
 }
 
 pub fn list(harnesses: &[&dyn Harness], sources: &[&dyn StatusSource], now: SystemTime) -> Listing {
@@ -85,7 +86,11 @@ pub fn list(harnesses: &[&dyn Harness], sources: &[&dyn StatusSource], now: Syst
         }
     }
     agents.sort_by_key(|agent| (need(&agent.state), Reverse(agent.since)));
-    Listing { agents, failures }
+    Listing {
+        agents,
+        failures,
+        now,
+    }
 }
 
 fn is_about(agent: &Agent, status: &Status) -> bool {

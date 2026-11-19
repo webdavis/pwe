@@ -8,3 +8,4 @@ members = ["engines/*"]
 default-members = [".", "engines/*"]
 
 [dependencies]
+agent = { path = "engines/agent" }

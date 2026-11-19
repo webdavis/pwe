@@ -300,6 +300,7 @@ fn only_a_finished_or_stopped_agent_becomes_idle_once_the_idle_time_has_passed()
     assert_eq!(state_of("/stopped-long-ago"), Some(State::Idle));
     assert_eq!(state_of("/failed-long-ago"), Some(State::Failed));
     assert_eq!(state_of("/finished-just-now"), Some(State::Finished));
+    assert_eq!(listing.now, now());
 }
 
 #[test]

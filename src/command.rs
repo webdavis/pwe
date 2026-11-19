@@ -1,7 +1,8 @@
 #[cfg(test)]
 mod tests;
 
-const DESCRIPTION: &str = "pwe sets up the keys it shares between Rex and Neovim.\n";
+const DESCRIPTION: &str =
+    "pwe sets up the keys Rex and Neovim share, and lists your coding agents.\n";
 const HELP_USAGE: &str = "  pwe help             Print this help\n";
 
 #[derive(Debug, PartialEq)]

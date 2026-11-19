@@ -1,69 +1,78 @@
 #[cfg(test)]
 mod tests;
 
-use crate::rex_config::RexConfig;
-use std::path::Path;
-
-const HELP: &str = "\
-pwe sets up the keys it shares between Rex and Neovim.
-
-Usage:
-  pwe rex get loader   Print the Lua to save beside Rex's init.lua
-  pwe rex get config   Print the Lua that loader runs each time Rex loads its config
-  pwe help             Print this help
-
-Examples:
-  pwe rex get loader > ~/.config/rex/pwe.lua
-  echo 'require(\"pwe\").setup()' >> ~/.config/rex/init.lua
-  pwe rex get config | less
-";
+const DESCRIPTION: &str = "pwe sets up the keys it shares between Rex and Neovim.\n";
+const HELP_USAGE: &str = "  pwe help             Print this help\n";
 
 #[derive(Debug, PartialEq)]
-pub enum Failure {
-    Usage(String),
-    Runtime(String),
+pub struct Answer {
+    pub output: String,
+    pub error: String,
+    pub exit_code: u8,
 }
 
-impl Failure {
-    pub fn message(&self) -> &str {
-        match self {
-            Failure::Usage(message) | Failure::Runtime(message) => message,
+impl Answer {
+    pub fn success(output: String) -> Self {
+        Self {
+            output,
+            error: String::new(),
+            exit_code: 0,
         }
     }
 
-    pub fn exit_code(&self) -> u8 {
-        match self {
-            Failure::Usage(_) => 2,
-            Failure::Runtime(_) => 1,
+    pub fn runtime_failure(error: String) -> Self {
+        Self {
+            output: String::new(),
+            error,
+            exit_code: 1,
+        }
+    }
+
+    pub fn usage_failure(error: String) -> Self {
+        Self {
+            output: String::new(),
+            error,
+            exit_code: 2,
         }
     }
 }
 
 pub trait Command {
-    fn run(&self, arguments: &[String], pwe: Option<&Path>) -> Result<String, Failure>;
+    fn noun(&self) -> &'static str;
+    fn usage(&self) -> &'static str;
+    fn examples(&self) -> &'static str;
+    fn run(&self, words: &[&str]) -> Option<Answer>;
 }
 
-pub struct Commands<'rex> {
-    pub rex: &'rex dyn RexConfig,
+pub struct Commands<'nouns> {
+    pub nouns: &'nouns [&'nouns dyn Command],
 }
 
-impl Command for Commands<'_> {
-    fn run(&self, arguments: &[String], pwe: Option<&Path>) -> Result<String, Failure> {
+impl Commands<'_> {
+    pub fn run(&self, arguments: &[String]) -> Answer {
         let words: Vec<&str> = arguments.iter().map(String::as_str).collect();
-        match words.as_slice() {
-            [] | ["help", ..] => Ok(HELP.to_string()),
-            _ if words.iter().any(|word| matches!(*word, "-h" | "--help")) => Ok(HELP.to_string()),
-            ["rex", "get", "loader"] => pwe
-                .and_then(Path::to_str)
-                .map(|pwe| self.rex.loader(pwe))
-                .ok_or_else(|| {
-                    Failure::Runtime("pwe: cannot tell where it is installed\n".to_string())
+        match words.split_first() {
+            None | Some((&"help", _)) => Answer::success(self.help()),
+            _ if words.iter().any(|word| matches!(*word, "-h" | "--help")) => {
+                Answer::success(self.help())
+            }
+            Some((noun, rest)) => self
+                .nouns
+                .iter()
+                .find(|command| command.noun() == *noun)
+                .and_then(|command| command.run(rest))
+                .unwrap_or_else(|| {
+                    Answer::usage_failure(format!(
+                        "pwe: unknown command \"{}\"\nRun: pwe help\n",
+                        words.join(" ")
+                    ))
                 }),
-            ["rex", "get", "config"] => Ok(self.rex.config()),
-            _ => Err(Failure::Usage(format!(
-                "pwe: unknown command \"{}\"\nRun: pwe help\n",
-                words.join(" ")
-            ))),
         }
+    }
+
+    fn help(&self) -> String {
+        let usage: String = self.nouns.iter().map(|noun| noun.usage()).collect();
+        let examples: String = self.nouns.iter().map(|noun| noun.examples()).collect();
+        format!("{DESCRIPTION}\nUsage:\n{usage}{HELP_USAGE}\nExamples:\n{examples}")
     }
 }

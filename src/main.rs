@@ -1,24 +1,21 @@
 mod command;
+mod rex_command;
 mod rex_config;
 
-use command::{Command, Commands};
+use command::Commands;
+use rex_command::RexCommand;
 use rex_config::EmbeddedRexConfig;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
     let pwe = std::env::current_exe().ok();
-    let commands = Commands {
-        rex: &EmbeddedRexConfig,
+    let rex = RexCommand {
+        config: &EmbeddedRexConfig,
+        pwe: pwe.as_deref(),
     };
-    match commands.run(&arguments, pwe.as_deref()) {
-        Ok(output) => {
-            print!("{output}");
-            ExitCode::SUCCESS
-        }
-        Err(failure) => {
-            eprint!("{}", failure.message());
-            ExitCode::from(failure.exit_code())
-        }
-    }
+    let answer = Commands { nouns: &[&rex] }.run(&arguments);
+    print!("{}", answer.output);
+    eprint!("{}", answer.error);
+    ExitCode::from(answer.exit_code)
 }

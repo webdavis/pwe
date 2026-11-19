@@ -79,7 +79,6 @@ The 10 minutes lives in one place in the core, and tests do not repeat the numbe
 
 Each line is one pull request, in this order. Delete a line when it is built.
 
-3. `pwe agent list`, connected with no harness.
 4. `OmpHarness`, from omp's own files.
 5. A Rex status source.
 6. `ClaudeCodeHarness`.

@@ -67,7 +67,7 @@
     {
       "id": "agent_text",
       "type": "frontend",
-      "label": "agent_text()",
+      "label": "agent_view()",
       "sublabel": "presentation",
       "row": 0,
       "col": 2

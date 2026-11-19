@@ -76,7 +76,6 @@ Ask the owner before building anything that needs one of these.
 
 Each line is one pull request, in this order. Delete a line when it is built.
 
-2. The `engines/agent` package and the core, tested with made-up harnesses and sources. `default-members` makes a plain `cargo test` cover it, and `just check` runs `cargo test --lib --bins`.
 3. `pwe agent list`, connected with no harness.
 4. `OmpHarness`, from omp's own files.
 5. A Rex status source.

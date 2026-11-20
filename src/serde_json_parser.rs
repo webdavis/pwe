@@ -20,6 +20,6 @@ impl Document for Value {
     }
 
     fn text(&self) -> Option<&str> {
-        Some(self.as_str().unwrap())
+        self.as_str()
     }
 }

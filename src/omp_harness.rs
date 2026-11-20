@@ -44,6 +44,7 @@ impl OmpHarness<'_> {
             .entries(&omp.join("run/session-owners"))
             .iter()
             .filter_map(|lock| lock.file_name()?.to_str()?.strip_suffix(".lock"))
+            .filter(|id| !id.ends_with("__advisor"))
             .map(str::to_string)
             .collect()
     }

@@ -274,6 +274,15 @@ fn a_session_omp_no_longer_holds_is_neither_listed_nor_read() {
 }
 
 #[test]
+fn an_advisor_session_is_not_an_agent() {
+    let mut sut = make_sut(&[]);
+    sut.disk = DiskSpy::default();
+    sut.disk.add(&format!("{OWNERS}/{ID}__advisor.lock"), "");
+    assert_eq!(sut.harness().agents(), Ok(vec![]));
+    assert!(sut.programs.runs.borrow().is_empty());
+}
+
+#[test]
 fn without_sessions_omp_is_not_run() {
     let mut sut = make_sut(&[]);
     sut.disk = DiskSpy::default();

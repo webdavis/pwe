@@ -1,8 +1,11 @@
 mod agent_command;
 mod agent_view;
 mod command;
+mod document;
+mod json_parser;
 mod rex_command;
 mod rex_config;
+mod serde_json_parser;
 
 use agent_command::AgentCommand;
 use command::Commands;

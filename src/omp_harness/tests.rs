@@ -390,6 +390,22 @@ fn a_finished_turn_is_finished() {
 }
 
 #[test]
+fn a_finished_turn_with_background_work_still_running_is_working() {
+    let started = [
+        session_start(),
+        user(2),
+        tool_start(3, "c1", "task", "Researching"),
+        background_started(4, "c1", "Scout"),
+        assistant(5, "stop"),
+    ];
+    assert_eq!(state_of(&make_sut(&started)), (State::Working, time(5)));
+    let mut done = started.to_vec();
+    done.push(background_done(6, "Scout"));
+    done.push(assistant(7, "stop"));
+    assert_eq!(state_of(&make_sut(&done)), (State::Finished, time(7)));
+}
+
+#[test]
 fn a_cut_off_turn_is_stopped() {
     assert_eq!(
         state_of(&make_sut(&[

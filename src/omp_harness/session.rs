@@ -22,6 +22,7 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
     let mut folder = None;
     let mut began = None;
     let mut title = None;
+    let mut background: Vec<String> = Vec::new();
     let mut last = Last::Nothing;
     for entry in content.lines().filter_map(|line| parser.parse(line)) {
         let at = time(entry.get("timestamp"));
@@ -34,6 +35,9 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
                 title = entry.get("title").text().map(str::to_string);
             }
             "custom_message" if is(entry.get("customType"), "async-result") => {
+                for job in entry.get("details").get("jobs").items() {
+                    background.retain(|running| !is(job.get("jobId"), running));
+                }
                 last = at.map_or(last, Last::InFlight);
             }
             "message" => {
@@ -43,6 +47,12 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
                         last = at.map_or(last, Last::InFlight);
                     }
                     Some("toolResult") => {
+                        let job = message.get("details").get("async");
+                        if let (Some("running"), Some(id)) =
+                            (job.get("state").text(), job.get("jobId").text())
+                        {
+                            background.push(id.to_string());
+                        }
                         last = at.map_or(last, Last::InFlight);
                     }
                     Some("assistant") => {
@@ -63,7 +73,7 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
     let (state, since) = match last {
         Last::Nothing => (State::Idle, began?),
         Last::InFlight(at) => (State::Working, at),
-        Last::Assistant { stop, at } => (after_reply(&stop), at),
+        Last::Assistant { stop, at } => (after_reply(&stop, &background), at),
     };
     Some(Session {
         folder: folder?,
@@ -73,9 +83,10 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
     })
 }
 
-fn after_reply(stop: &str) -> State {
+fn after_reply(stop: &str, background: &[String]) -> State {
     match stop {
-        "stop" => State::Finished,
+        "stop" if background.is_empty() => State::Finished,
+        "stop" => State::Working,
         "aborted" => State::Stopped,
         _ => State::Busy,
     }

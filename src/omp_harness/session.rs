@@ -8,8 +8,18 @@ use std::time::SystemTime;
 pub struct Session {
     pub folder: PathBuf,
     pub title: Option<String>,
-    pub state: State,
-    pub since: SystemTime,
+    pub progress: Progress,
+}
+
+pub enum Progress {
+    Settled(State, SystemTime),
+    Waiting(Vec<Call>),
+}
+
+pub struct Call {
+    pub tool: String,
+    pub intent: Option<String>,
+    pub started: SystemTime,
 }
 
 enum Last {
@@ -22,6 +32,7 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
     let mut folder = None;
     let mut began = None;
     let mut title = None;
+    let mut pending: Vec<(String, Call)> = Vec::new();
     let mut background: Vec<String> = Vec::new();
     let mut last = Last::Nothing;
     for entry in content.lines().filter_map(|line| parser.parse(line)) {
@@ -33,6 +44,23 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
             }
             "title" | "title_change" => {
                 title = entry.get("title").text().map(str::to_string);
+            }
+            "custom" if is(entry.get("customType"), "tool_execution_start") => {
+                let data = entry.get("data");
+                if let (Some(id), Some(tool), Some(started)) = (
+                    data.get("toolCallId").text(),
+                    data.get("toolName").text(),
+                    time(data.get("startedAt")).or(at),
+                ) {
+                    pending.push((
+                        id.to_string(),
+                        Call {
+                            tool: tool.to_string(),
+                            intent: data.get("intent").text().map(str::to_string),
+                            started,
+                        },
+                    ));
+                }
             }
             "custom_message" if is(entry.get("customType"), "async-result") => {
                 for job in entry.get("details").get("jobs").items() {
@@ -47,6 +75,7 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
                         last = at.map_or(last, Last::InFlight);
                     }
                     Some("toolResult") => {
+                        pending.retain(|(id, _)| !is(message.get("toolCallId"), id));
                         let job = message.get("details").get("async");
                         if let (Some("running"), Some(id)) =
                             (job.get("state").text(), job.get("jobId").text())
@@ -70,16 +99,20 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
             _ => {}
         }
     }
-    let (state, since) = match last {
-        Last::Nothing => (State::Idle, began?),
-        Last::InFlight(at) => (State::Working, at),
-        Last::Assistant { stop, at } => (after_reply(&stop, &background), at),
+    let progress = if pending.is_empty() {
+        let (state, since) = match last {
+            Last::Nothing => (State::Idle, began?),
+            Last::InFlight(at) => (State::Working, at),
+            Last::Assistant { stop, at } => (after_reply(&stop, &background), at),
+        };
+        Progress::Settled(state, since)
+    } else {
+        Progress::Waiting(pending.into_iter().map(|(_, call)| call).collect())
     };
     Some(Session {
         folder: folder?,
         title,
-        state,
-        since,
+        progress,
     })
 }
 

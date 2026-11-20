@@ -6,9 +6,11 @@ mod time;
 use crate::disk::Disk;
 use crate::json_parser::JsonParser;
 use crate::programs::Programs;
-use agent::{Agent, Harness};
+use agent::{Agent, Harness, State};
+use session::{Call, Progress};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 pub struct OmpHarness<'a> {
     pub disk: &'a dyn Disk,
@@ -82,9 +84,27 @@ impl OmpHarness<'_> {
 
     fn agent(&self, id: String, file: &Path) -> Option<Agent> {
         let session = session::read(&self.disk.read(file)?, self.parser)?;
-        let mut agent = Agent::new(session.folder, session.state, session.since);
+        let (state, since) = match session.progress {
+            Progress::Settled(state, since) => (state, since),
+            Progress::Waiting(calls) => self.waiting(&calls),
+        };
+        let mut agent = Agent::new(session.folder, state, since);
         agent.session = Some(id);
         agent.title = session.title;
         Some(agent)
+    }
+
+    fn waiting(&self, calls: &[Call]) -> (State, SystemTime) {
+        let since = calls
+            .iter()
+            .map(|call| call.started)
+            .max()
+            .unwrap_or(SystemTime::UNIX_EPOCH);
+        let question = calls.iter().find(|call| call.tool == "ask");
+        let state = State::NeedsYou {
+            kind: Some("question".to_string()),
+            text: question.and_then(|question| question.intent.clone()),
+        };
+        (state, since)
     }
 }

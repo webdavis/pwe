@@ -441,6 +441,25 @@ fn a_model_request_in_flight_is_working() {
 }
 
 #[test]
+fn a_question_waiting_on_the_owner_needs_you_with_its_text() {
+    let sut = make_sut(&[
+        session_start(),
+        user(2),
+        tool_start(3, "c1", "ask", "Which name do you want?"),
+    ]);
+    assert_eq!(
+        state_of(&sut),
+        (
+            State::NeedsYou {
+                kind: Some("question".to_string()),
+                text: Some("Which name do you want?".to_string())
+            },
+            time(3)
+        )
+    );
+}
+
+#[test]
 fn a_line_the_parser_cannot_read_is_skipped() {
     let sut = make_sut(&[session_start(), user(2), assistant(3, "stop"), unreadable()]);
     assert_eq!(state_of(&sut), (State::Finished, time(3)));

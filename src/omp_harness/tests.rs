@@ -3,10 +3,11 @@ use crate::disk::Disk;
 use crate::document::Document;
 use crate::json_parser::JsonParser;
 use crate::programs::Programs;
-use agent::Harness;
+use agent::{Harness, State};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 
 const ID: &str = "01a1-session";
 const SESSIONS: &str = "/home/.omp/agent/sessions/-work";
@@ -175,8 +176,17 @@ fn make_sut(lines: &[Tree]) -> Sut {
     }
 }
 
+fn state_of(sut: &Sut) -> (State, SystemTime) {
+    let agents = sut.harness().agents().unwrap();
+    (agents[0].state.clone(), agents[0].since)
+}
+
 fn session_file() -> String {
     format!("{SESSIONS}/2026-11-19T10-00-00-000Z_{ID}.jsonl")
+}
+
+fn time(seconds: u64) -> SystemTime {
+    SystemTime::UNIX_EPOCH + Duration::from_secs(seconds)
 }
 
 fn text(value: &str) -> Tree {
@@ -304,4 +314,12 @@ fn without_a_home_folder_omp_cannot_be_read() {
     sut.home = None;
     let failure = sut.harness().agents().unwrap_err();
     assert!(failure.contains("home"), "{failure}");
+}
+
+#[test]
+fn a_session_before_its_first_prompt_is_idle() {
+    assert_eq!(
+        state_of(&make_sut(&[session_start()])),
+        (State::Idle, time(1))
+    );
 }

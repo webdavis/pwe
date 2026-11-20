@@ -1,14 +1,14 @@
 mod session;
 #[cfg(test)]
 mod tests;
+mod time;
 
 use crate::disk::Disk;
 use crate::json_parser::JsonParser;
 use crate::programs::Programs;
-use agent::{Agent, Harness, State};
+use agent::{Agent, Harness};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
 pub struct OmpHarness<'a> {
     pub disk: &'a dyn Disk,
@@ -82,7 +82,7 @@ impl OmpHarness<'_> {
 
     fn agent(&self, id: String, file: &Path) -> Option<Agent> {
         let session = session::read(&self.disk.read(file)?, self.parser)?;
-        let mut agent = Agent::new(session.folder, State::Idle, SystemTime::UNIX_EPOCH);
+        let mut agent = Agent::new(session.folder, session.state, session.since);
         agent.session = Some(id);
         agent.title = session.title;
         Some(agent)

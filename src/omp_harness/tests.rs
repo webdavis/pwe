@@ -323,3 +323,11 @@ fn a_session_before_its_first_prompt_is_idle() {
         (State::Idle, time(1))
     );
 }
+
+#[test]
+fn a_finished_turn_is_finished() {
+    assert_eq!(
+        state_of(&make_sut(&[session_start(), user(2), assistant(3, "stop")])),
+        (State::Finished, time(3))
+    );
+}

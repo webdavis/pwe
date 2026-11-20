@@ -12,10 +12,16 @@ pub struct Session {
     pub since: SystemTime,
 }
 
+enum Last {
+    Nothing,
+    Assistant(SystemTime),
+}
+
 pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
     let mut folder = None;
     let mut began = None;
     let mut title = None;
+    let mut last = Last::Nothing;
     for entry in content.lines().map(|line| parser.parse(line).unwrap()) {
         let at = time(entry.get("timestamp"));
         match entry.get("type").text().unwrap_or_default() {
@@ -26,14 +32,29 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
             "title" | "title_change" => {
                 title = entry.get("title").text().map(str::to_string);
             }
+            "message" => {
+                let message = entry.get("message");
+                match message.get("role").text() {
+                    Some("assistant") => {
+                        if let Some(at) = at {
+                            last = Last::Assistant(at);
+                        }
+                    }
+                    _ => {}
+                }
+            }
             _ => {}
         }
     }
+    let (state, since) = match last {
+        Last::Nothing => (State::Idle, began?),
+        Last::Assistant(at) => (State::Finished, at),
+    };
     Some(Session {
         folder: folder?,
         title,
-        state: State::Idle,
-        since: began?,
+        state,
+        since,
     })
 }
 

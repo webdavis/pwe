@@ -92,7 +92,7 @@
       "type": "backend",
       "label": "RexStatusSource",
       "sublabel": "later",
-      "row": 3,
+      "row": 2,
       "col": 2
     },
     {
@@ -124,6 +124,22 @@
       "label": "LocalPrograms",
       "row": 4,
       "col": 1
+    },
+    {
+      "id": "json_parser",
+      "type": "security",
+      "label": "<JsonParser>",
+      "sublabel": "text into a <Document>",
+      "row": 3,
+      "col": 2
+    },
+    {
+      "id": "serde_json_parser",
+      "type": "backend",
+      "label": "SerdeJsonParser",
+      "sublabel": "wraps serde_json",
+      "row": 4,
+      "col": 2
     },
     {
       "id": "list",
@@ -181,7 +197,9 @@
         "local_disk",
         "disk",
         "programs",
-        "local_programs"
+        "local_programs",
+        "json_parser",
+        "serde_json_parser"
       ]
     },
     {
@@ -254,6 +272,19 @@
       "from": "omp_harness",
       "to": "programs",
       "label": "runs"
+    },
+    {
+      "id": "omp-json",
+      "from": "omp_harness",
+      "to": "json_parser",
+      "label": "parses with"
+    },
+    {
+      "id": "json-impl",
+      "from": "serde_json_parser",
+      "to": "json_parser",
+      "label": "implements",
+      "variant": "dashed"
     },
     {
       "id": "disk-impl",

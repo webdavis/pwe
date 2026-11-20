@@ -9,3 +9,4 @@ default-members = [".", "engines/*"]
 
 [dependencies]
 agent = { path = "engines/agent" }
+serde_json = "1.0.154"

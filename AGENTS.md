@@ -26,7 +26,9 @@
 
 ## Tests
 
-- A unit test calls the real code and uses hand-written fakes for the traits it depends on. It never sleeps, starts a program, or touches disk or network.
+- A unit test calls the real code and uses hand-written doubles for the traits it depends on. It never sleeps, starts a program, or touches disk or network.
+- A double hands back the test's values. A double whose calls a test checks records every call, typed and in order, and is named a spy.
+- Each test file builds its system under test through one `make_sut` helper.
 - Write one test per behaviour the feature has, failures included.
 - Unit tests live in `src/<feature>/tests.rs` inside their package; this replaces the global rule on where tests live. The only test code in `src/<feature>.rs` is `#[cfg(test)] mod tests;`.
 - Any other kind of test needs the owner's yes. Name the test and say what a unit test cannot prove.

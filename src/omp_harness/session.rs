@@ -14,7 +14,7 @@ pub struct Session {
 
 enum Last {
     Nothing,
-    Assistant(SystemTime),
+    Assistant { stop: String, at: SystemTime },
 }
 
 pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
@@ -36,8 +36,12 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
                 let message = entry.get("message");
                 match message.get("role").text() {
                     Some("assistant") => {
+                        let stop = message.get("stopReason").text().unwrap_or_default();
                         if let Some(at) = at {
-                            last = Last::Assistant(at);
+                            last = Last::Assistant {
+                                stop: stop.to_string(),
+                                at,
+                            };
                         }
                     }
                     _ => {}
@@ -48,7 +52,7 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
     }
     let (state, since) = match last {
         Last::Nothing => (State::Idle, began?),
-        Last::Assistant(at) => (State::Finished, at),
+        Last::Assistant { stop, at } => (after_reply(&stop), at),
     };
     Some(Session {
         folder: folder?,
@@ -56,6 +60,14 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
         state,
         since,
     })
+}
+
+fn after_reply(stop: &str) -> State {
+    match stop {
+        "stop" => State::Finished,
+        "aborted" => State::Stopped,
+        _ => State::Busy,
+    }
 }
 
 fn time(field: &dyn Document) -> Option<SystemTime> {

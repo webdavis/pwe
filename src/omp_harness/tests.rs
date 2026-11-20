@@ -337,6 +337,18 @@ fn a_finished_turn_is_finished() {
 }
 
 #[test]
+fn a_cut_off_turn_is_stopped() {
+    assert_eq!(
+        state_of(&make_sut(&[
+            session_start(),
+            user(2),
+            assistant(3, "aborted")
+        ])),
+        (State::Stopped, time(3))
+    );
+}
+
+#[test]
 fn a_line_the_parser_cannot_read_is_skipped() {
     let sut = make_sut(&[session_start(), user(2), assistant(3, "stop"), unreadable()]);
     assert_eq!(state_of(&sut), (State::Finished, time(3)));

@@ -235,3 +235,11 @@ fn a_live_session_is_listed_with_its_folder_session_and_title() {
         }]
     );
 }
+
+#[test]
+fn a_lease_that_cannot_be_read_is_a_failure() {
+    let mut sut = make_sut(&[session_start()]);
+    sut.programs.answer = Err("omp: command not found".to_string());
+    let failure = sut.harness().agents().unwrap_err();
+    assert!(failure.contains("omp: command not found"), "{failure}");
+}

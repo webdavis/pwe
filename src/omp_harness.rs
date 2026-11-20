@@ -46,7 +46,9 @@ impl OmpHarness<'_> {
     fn live(&self, ids: &[String]) -> Result<(), String> {
         let mut arguments = vec!["session", "lease", "--json", "--"];
         arguments.extend(ids.iter().map(String::as_str));
-        self.programs.run("omp", &arguments).unwrap();
+        self.programs
+            .run("omp", &arguments)
+            .map_err(|error| format!("cannot ask omp which sessions are live: {error}"))?;
         Ok(())
     }
 

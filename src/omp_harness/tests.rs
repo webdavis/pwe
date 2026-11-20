@@ -548,6 +548,18 @@ fn errors_tell_retrying_from_failed() {
 }
 
 #[test]
+fn an_error_in_an_earlier_turn_does_not_count_toward_a_retry() {
+    let sut = make_sut(&[
+        session_start(),
+        user(2),
+        assistant_error(3, "overloaded"),
+        user(4),
+        assistant_error(5, "overloaded"),
+    ]);
+    assert_eq!(state_of(&sut), (State::Failed, time(5)));
+}
+
+#[test]
 fn a_call_left_without_a_result_in_an_ended_turn_no_longer_counts() {
     let unanswered = [
         session_start(),

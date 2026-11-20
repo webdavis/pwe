@@ -77,6 +77,7 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
                 let message = entry.get("message");
                 match message.get("role").text() {
                     Some("user") => {
+                        errors_this_turn = 0;
                         pending.clear();
                         last = at.map_or(last, Last::InFlight);
                     }

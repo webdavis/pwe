@@ -12,8 +12,12 @@ mod serde_json_parser;
 
 use agent_command::AgentCommand;
 use command::Commands;
+use disk::LocalDisk;
+use omp_harness::OmpHarness;
+use programs::LocalPrograms;
 use rex_command::RexCommand;
 use rex_config::EmbeddedRexConfig;
+use serde_json_parser::SerdeJsonParser;
 use std::process::ExitCode;
 use std::time::SystemTime;
 
@@ -25,7 +29,13 @@ fn main() -> ExitCode {
         config: &EmbeddedRexConfig,
         pwe: pwe.as_deref(),
     };
-    let list = || agent::list(&[], &[], SystemTime::now());
+    let omp = OmpHarness {
+        disk: &LocalDisk,
+        programs: &LocalPrograms,
+        parser: &SerdeJsonParser,
+        home: home.as_deref(),
+    };
+    let list = || agent::list(&[&omp], &[], SystemTime::now());
     let agents = AgentCommand {
         list: &list,
         home: home.as_deref(),

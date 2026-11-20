@@ -8,10 +8,12 @@ The picture is drawn from `docs/architecture.json`. `<Name>` is a trait. `name()
 
 | Package | Path | May use |
 | --- | --- | --- |
-| program | repo root | the core, `serde_json` |
+| program | repo root | the core, `serde_json` behind `<JsonParser>` |
 | agent core | `engines/agent` | the standard library |
 
 A second engine gets its own package under `engines/`. The workspace lists `members = ["engines/*"]` and `default-members = [".", "engines/*"]`, so a plain `cargo test` covers every engine; `cargo test -p pwe` does not. The compiler does not report unused public parts of a core, so delete what the program stops using.
+
+Every outside package sits behind a trait of pwe's own. One type implements that trait with the package, and its file is the only one that names the package, so swapping the package means one new type and one line in `main.rs`. `SerdeJsonParser` implements `<JsonParser>` with `serde_json`.
 
 ## The core
 
@@ -29,7 +31,7 @@ The core takes every fact as a value, the current time included.
 ## The program
 
 - **Harness module**: one per agent program (`OmpHarness`, `ClaudeCodeHarness`, `CodexHarness`). It holds that program's paths, commands and rules, and reaches the machine only through the readers. A fact only one program has stays inside its module. It uses what the program reports before working a state out from its files.
-- **Readers**: `<Disk>` and `<Programs>`, shared by every harness. `LocalDisk` reads and `LocalPrograms` runs. They hold no rules.
+- **Readers**: `<Disk>`, `<Programs>` and `<JsonParser>`, shared by every harness. `LocalDisk` reads, `LocalPrograms` runs, and `SerdeJsonParser` turns text into a `<Document>`, whose fields read the same whatever format the text came in. They hold no rules.
 - **Rex source**: runs the `rex` program. Rex's socket waits until a view needs live updates.
 - **Presentation**: a plain function per view, from a `Listing` to what is shown. Each row shows how long its agent has been in its state, such as `finished 2m`. Text read from an agent program's files is printed with its control characters removed, so it cannot steer the terminal.
 - **Command line**: each noun implements `<Command>` (`RexCommand`, `AgentCommand`) and gives its words and its lines of help. `Commands` hands the words to the noun and is not itself a `<Command>`. An answer carries the output, the error text and the exit code. `AgentCommand` holds a function that returns a `Listing`, so a list fed later by a background process changes only `main.rs`; its tests hand it a made-up one.
@@ -79,8 +81,7 @@ The 10 minutes lives in one place in the core, and tests do not repeat the numbe
 
 Each line is one pull request, in this order. Delete a line when it is built.
 
-4. `OmpHarness`, from omp's own files.
-5. A Rex status source.
+5. A Rex status source. `OmpHarness` then gives each session's process id, found through `~/.omp/agent/terminal-sessions`, so Rex can join it.
 6. `ClaudeCodeHarness`.
 7. `CodexHarness`, after its hooks are tested with its background server on. It gives each window's process id, since Rex can join a Codex window by nothing else.
 8. omp's relay, as a source: `omp collab list` says when an agent needs input, and omp's files cover each agent the relay does not list. It needs a relay program kept running; retest on the current omp first.

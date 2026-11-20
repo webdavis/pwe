@@ -341,3 +341,19 @@ fn a_line_the_parser_cannot_read_is_skipped() {
     let sut = make_sut(&[session_start(), user(2), assistant(3, "stop"), unreadable()]);
     assert_eq!(state_of(&sut), (State::Finished, time(3)));
 }
+
+#[test]
+fn omp_times_are_read_as_utc() {
+    let sut = make_sut(&[
+        session_start(),
+        user(2),
+        message(
+            text("2026-11-19T10:00:00.250Z"),
+            fields([("role", text("assistant")), ("stopReason", text("stop"))]),
+        ),
+    ]);
+    assert_eq!(
+        state_of(&sut).1,
+        SystemTime::UNIX_EPOCH + Duration::from_millis(1_795_082_400_250)
+    );
+}

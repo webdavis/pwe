@@ -519,6 +519,19 @@ fn any_other_tool_waiting_for_its_result_is_busy() {
 }
 
 #[test]
+fn a_call_left_without_a_result_in_an_ended_turn_no_longer_counts() {
+    let unanswered = [
+        session_start(),
+        user(2),
+        tool_start(3, "c1", "ask", "Which name?"),
+    ];
+    let next_prompt = [unanswered.to_vec(), vec![user(4)]].concat();
+    assert_eq!(state_of(&make_sut(&next_prompt)), (State::Working, time(4)));
+    let turn_ended = [unanswered.to_vec(), vec![assistant(4, "aborted")]].concat();
+    assert_eq!(state_of(&make_sut(&turn_ended)), (State::Stopped, time(4)));
+}
+
+#[test]
 fn a_line_the_parser_cannot_read_is_skipped() {
     let sut = make_sut(&[session_start(), user(2), assistant(3, "stop"), unreadable()]);
     assert_eq!(state_of(&sut), (State::Finished, time(3)));

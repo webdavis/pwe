@@ -72,6 +72,7 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
                 let message = entry.get("message");
                 match message.get("role").text() {
                     Some("user") => {
+                        pending.clear();
                         last = at.map_or(last, Last::InFlight);
                     }
                     Some("toolResult") => {
@@ -86,6 +87,9 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
                     }
                     Some("assistant") => {
                         let stop = message.get("stopReason").text().unwrap_or_default();
+                        if stop != "toolUse" {
+                            pending.clear();
+                        }
                         if let Some(at) = at {
                             last = Last::Assistant {
                                 stop: stop.to_string(),

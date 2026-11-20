@@ -46,3 +46,8 @@ fn a_field_that_is_not_a_list_has_no_items() {
     assert_eq!(document.get("held").items().count(), 0);
     assert_eq!(document.get("missing").items().count(), 0);
 }
+
+#[test]
+fn text_that_is_not_json_gives_no_document() {
+    assert!(make_sut().parse(r#"{"type":"message","timest"#).is_none());
+}

@@ -9,7 +9,7 @@ pub struct SerdeJsonParser;
 
 impl JsonParser for SerdeJsonParser {
     fn parse(&self, text: &str) -> Option<Box<dyn Document>> {
-        let value: Value = serde_json::from_str(text).unwrap();
+        let value: Value = serde_json::from_str(text).ok()?;
         Some(Box::new(value))
     }
 }

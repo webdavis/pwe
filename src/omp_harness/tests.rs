@@ -243,3 +243,11 @@ fn a_lease_that_cannot_be_read_is_a_failure() {
     let failure = sut.harness().agents().unwrap_err();
     assert!(failure.contains("omp: command not found"), "{failure}");
 }
+
+#[test]
+fn without_a_home_folder_omp_cannot_be_read() {
+    let mut sut = make_sut(&[]);
+    sut.home = None;
+    let failure = sut.harness().agents().unwrap_err();
+    assert!(failure.contains("home"), "{failure}");
+}

@@ -22,7 +22,7 @@ impl Harness for OmpHarness<'_> {
     }
 
     fn agents(&self) -> Result<Vec<Agent>, String> {
-        let omp = self.home.unwrap().join(".omp");
+        let omp = self.home.ok_or("cannot tell the home folder")?.join(".omp");
         let ids = self.session_ids(&omp);
         self.live(&ids)?;
         Ok(self

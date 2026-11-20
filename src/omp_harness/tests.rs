@@ -493,6 +493,22 @@ fn a_command_or_subagent_is_working_once_its_output_file_appears_and_busy_before
 }
 
 #[test]
+fn other_files_appearing_in_the_session_folder_do_not_count_as_output() {
+    for (tool, other_file) in [
+        ("bash", format!("{}/local/7.read.log", session_folder())),
+        ("task", format!("{}/__advisor.jsonl", session_folder())),
+    ] {
+        let mut sut = make_sut(&[
+            session_start(),
+            user(2),
+            tool_start(3, "c1", tool, "Running"),
+        ]);
+        sut.disk.add(&other_file, "", Some(time(4)));
+        assert_eq!(state_of(&sut), (State::Busy, time(3)), "{tool}");
+    }
+}
+
+#[test]
 fn any_other_tool_waiting_for_its_result_is_busy() {
     let sut = make_sut(&[
         session_start(),

@@ -112,15 +112,29 @@ impl OmpHarness<'_> {
     }
 
     fn is_running(&self, call: &Call, outputs: &Path) -> bool {
-        let folder = match call.tool.as_str() {
-            "bash" | "eval" => outputs.join("local"),
-            "task" => outputs.to_path_buf(),
+        let (folder, is_output): (PathBuf, fn(&str) -> bool) = match call.tool.as_str() {
+            "bash" | "eval" => (outputs.join("local"), is_command_output),
+            "task" => (outputs.to_path_buf(), is_subagent_file),
             _ => return false,
         };
         self.disk.entries(&folder).iter().any(|file| {
-            self.disk
-                .created(file)
-                .is_some_and(|created| created >= call.started)
+            file.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(is_output)
+                && self
+                    .disk
+                    .created(file)
+                    .is_some_and(|created| created >= call.started)
         })
     }
+}
+
+fn is_command_output(name: &str) -> bool {
+    name.strip_suffix(".log").is_some_and(|number| {
+        !number.is_empty() && number.bytes().all(|byte| byte.is_ascii_digit())
+    })
+}
+
+fn is_subagent_file(name: &str) -> bool {
+    name.ends_with(".jsonl") && name != "__advisor.jsonl"
 }

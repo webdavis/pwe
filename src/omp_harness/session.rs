@@ -22,7 +22,7 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
     let mut began = None;
     let mut title = None;
     let mut last = Last::Nothing;
-    for entry in content.lines().map(|line| parser.parse(line).unwrap()) {
+    for entry in content.lines().filter_map(|line| parser.parse(line)) {
         let at = time(entry.get("timestamp"));
         match entry.get("type").text().unwrap_or_default() {
             "session" => {

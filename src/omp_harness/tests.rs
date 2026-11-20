@@ -215,6 +215,10 @@ fn lease(held: &[&str]) -> Tree {
     fields([("held", Tree::List(held.iter().map(|id| text(id)).collect()))])
 }
 
+fn unreadable() -> Tree {
+    Tree::Missing
+}
+
 fn session_start() -> Tree {
     fields([
         ("type", text("session")),
@@ -330,4 +334,10 @@ fn a_finished_turn_is_finished() {
         state_of(&make_sut(&[session_start(), user(2), assistant(3, "stop")])),
         (State::Finished, time(3))
     );
+}
+
+#[test]
+fn a_line_the_parser_cannot_read_is_skipped() {
+    let sut = make_sut(&[session_start(), user(2), assistant(3, "stop"), unreadable()]);
+    assert_eq!(state_of(&sut), (State::Finished, time(3)));
 }

@@ -274,6 +274,14 @@ fn a_session_omp_no_longer_holds_is_neither_listed_nor_read() {
 }
 
 #[test]
+fn without_sessions_omp_is_not_run() {
+    let mut sut = make_sut(&[]);
+    sut.disk = DiskSpy::default();
+    assert_eq!(sut.harness().agents(), Ok(vec![]));
+    assert!(sut.programs.runs.borrow().is_empty());
+}
+
+#[test]
 fn a_lease_that_cannot_be_read_is_a_failure() {
     let mut sut = make_sut(&[session_start()]);
     sut.programs.answer = Err("omp: command not found".to_string());

@@ -25,6 +25,9 @@ impl Harness for OmpHarness<'_> {
     fn agents(&self) -> Result<Vec<Agent>, String> {
         let omp = self.home.ok_or("cannot tell the home folder")?.join(".omp");
         let ids = self.session_ids(&omp);
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
         let live = self.live(&ids)?;
         Ok(self
             .session_files(&omp)

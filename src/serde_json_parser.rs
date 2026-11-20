@@ -16,7 +16,7 @@ impl JsonParser for SerdeJsonParser {
 
 impl Document for Value {
     fn get(&self, name: &str) -> &dyn Document {
-        self.get(name).unwrap()
+        &self[name]
     }
 
     fn text(&self) -> Option<&str> {

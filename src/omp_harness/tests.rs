@@ -460,6 +460,16 @@ fn a_question_waiting_on_the_owner_needs_you_with_its_text() {
 }
 
 #[test]
+fn any_other_tool_waiting_for_its_result_is_busy() {
+    let sut = make_sut(&[
+        session_start(),
+        user(2),
+        tool_start(3, "c1", "edit", "Editing"),
+    ]);
+    assert_eq!(state_of(&sut), (State::Busy, time(3)));
+}
+
+#[test]
 fn a_line_the_parser_cannot_read_is_skipped() {
     let sut = make_sut(&[session_start(), user(2), assistant(3, "stop"), unreadable()]);
     assert_eq!(state_of(&sut), (State::Finished, time(3)));

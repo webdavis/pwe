@@ -100,10 +100,12 @@ impl OmpHarness<'_> {
             .map(|call| call.started)
             .max()
             .unwrap_or(SystemTime::UNIX_EPOCH);
-        let question = calls.iter().find(|call| call.tool == "ask");
-        let state = State::NeedsYou {
-            kind: Some("question".to_string()),
-            text: question.and_then(|question| question.intent.clone()),
+        let state = match calls.iter().find(|call| call.tool == "ask") {
+            Some(question) => State::NeedsYou {
+                kind: Some("question".to_string()),
+                text: question.intent.clone(),
+            },
+            None => State::Busy,
         };
         (state, since)
     }

@@ -14,6 +14,7 @@ pub struct Session {
 
 enum Last {
     Nothing,
+    InFlight(SystemTime),
     Assistant { stop: String, at: SystemTime },
 }
 
@@ -32,9 +33,18 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
             "title" | "title_change" => {
                 title = entry.get("title").text().map(str::to_string);
             }
+            "custom_message" if is(entry.get("customType"), "async-result") => {
+                last = at.map_or(last, Last::InFlight);
+            }
             "message" => {
                 let message = entry.get("message");
                 match message.get("role").text() {
+                    Some("user") => {
+                        last = at.map_or(last, Last::InFlight);
+                    }
+                    Some("toolResult") => {
+                        last = at.map_or(last, Last::InFlight);
+                    }
                     Some("assistant") => {
                         let stop = message.get("stopReason").text().unwrap_or_default();
                         if let Some(at) = at {
@@ -52,6 +62,7 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
     }
     let (state, since) = match last {
         Last::Nothing => (State::Idle, began?),
+        Last::InFlight(at) => (State::Working, at),
         Last::Assistant { stop, at } => (after_reply(&stop), at),
     };
     Some(Session {
@@ -72,4 +83,8 @@ fn after_reply(stop: &str) -> State {
 
 fn time(field: &dyn Document) -> Option<SystemTime> {
     field.text().and_then(time_of)
+}
+
+fn is(field: &dyn Document, text: &str) -> bool {
+    field.text() == Some(text)
 }

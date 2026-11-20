@@ -250,6 +250,59 @@ fn assistant(seconds: u64, stop: &str) -> Tree {
     )
 }
 
+fn tool_start(seconds: u64, call: &str, tool: &str, intent: &str) -> Tree {
+    fields([
+        ("type", text("custom")),
+        ("customType", text("tool_execution_start")),
+        ("timestamp", at(seconds)),
+        (
+            "data",
+            fields([
+                ("toolCallId", text(call)),
+                ("toolName", text(tool)),
+                ("startedAt", at(seconds)),
+                ("intent", text(intent)),
+            ]),
+        ),
+    ])
+}
+
+fn tool_result(seconds: u64, call: &str) -> Tree {
+    message(
+        at(seconds),
+        fields([("role", text("toolResult")), ("toolCallId", text(call))]),
+    )
+}
+
+fn background_started(seconds: u64, call: &str, job: &str) -> Tree {
+    message(
+        at(seconds),
+        fields([
+            ("role", text("toolResult")),
+            ("toolCallId", text(call)),
+            (
+                "details",
+                fields([(
+                    "async",
+                    fields([("state", text("running")), ("jobId", text(job))]),
+                )]),
+            ),
+        ]),
+    )
+}
+
+fn background_done(seconds: u64, job: &str) -> Tree {
+    fields([
+        ("type", text("custom_message")),
+        ("customType", text("async-result")),
+        ("timestamp", at(seconds)),
+        (
+            "details",
+            fields([("jobs", Tree::List(vec![fields([("jobId", text(job))])]))]),
+        ),
+    ])
+}
+
 #[test]
 fn a_live_session_is_listed_with_its_folder_session_and_title() {
     let sut = make_sut(&[
@@ -346,6 +399,29 @@ fn a_cut_off_turn_is_stopped() {
         ])),
         (State::Stopped, time(3))
     );
+}
+
+#[test]
+fn a_model_request_in_flight_is_working() {
+    for lines in [
+        vec![session_start(), user(2), assistant(3, "stop"), user(4)],
+        vec![
+            session_start(),
+            user(2),
+            tool_start(3, "c1", "read", "Reading"),
+            tool_result(4, "c1"),
+        ],
+        vec![
+            session_start(),
+            user(2),
+            tool_start(3, "c1", "task", "Researching"),
+            background_started(3, "c1", "Scout"),
+            assistant(3, "stop"),
+            background_done(4, "Scout"),
+        ],
+    ] {
+        assert_eq!(state_of(&make_sut(&lines)), (State::Working, time(4)));
+    }
 }
 
 #[test]

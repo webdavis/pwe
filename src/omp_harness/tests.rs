@@ -263,6 +263,17 @@ fn assistant(seconds: u64, stop: &str) -> Tree {
     )
 }
 
+fn assistant_error(seconds: u64, error: &str) -> Tree {
+    message(
+        at(seconds),
+        fields([
+            ("role", text("assistant")),
+            ("stopReason", text("error")),
+            ("errorMessage", text(error)),
+        ]),
+    )
+}
+
 fn tool_start(seconds: u64, call: &str, tool: &str, intent: &str) -> Tree {
     fields([
         ("type", text("custom")),
@@ -516,6 +527,24 @@ fn any_other_tool_waiting_for_its_result_is_busy() {
         tool_start(3, "c1", "edit", "Editing"),
     ]);
     assert_eq!(state_of(&sut), (State::Busy, time(3)));
+}
+
+#[test]
+fn errors_tell_retrying_from_failed() {
+    let turn = [session_start(), user(2)];
+    let one_error = [turn.to_vec(), vec![assistant_error(3, "overloaded")]].concat();
+    assert_eq!(state_of(&make_sut(&one_error)), (State::Failed, time(3)));
+    let two_errors = [one_error.clone(), vec![assistant_error(4, "overloaded")]].concat();
+    assert_eq!(state_of(&make_sut(&two_errors)), (State::Retrying, time(4)));
+    let given_up = [
+        turn.to_vec(),
+        vec![
+            assistant_error(3, "overloaded"),
+            assistant_error(4, "Retry budget exhausted after 2 retries: overloaded"),
+        ],
+    ]
+    .concat();
+    assert_eq!(state_of(&make_sut(&given_up)), (State::Failed, time(4)));
 }
 
 #[test]

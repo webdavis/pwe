@@ -25,7 +25,11 @@ pub struct Call {
 enum Last {
     Nothing,
     InFlight(SystemTime),
-    Assistant { stop: String, at: SystemTime },
+    Assistant {
+        stop: String,
+        error: String,
+        at: SystemTime,
+    },
 }
 
 pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
@@ -34,6 +38,7 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
     let mut title = None;
     let mut pending: Vec<(String, Call)> = Vec::new();
     let mut background: Vec<String> = Vec::new();
+    let mut errors_this_turn = 0;
     let mut last = Last::Nothing;
     for entry in content.lines().filter_map(|line| parser.parse(line)) {
         let at = time(entry.get("timestamp"));
@@ -87,12 +92,20 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
                     }
                     Some("assistant") => {
                         let stop = message.get("stopReason").text().unwrap_or_default();
+                        if stop == "error" {
+                            errors_this_turn += 1;
+                        }
                         if stop != "toolUse" {
                             pending.clear();
                         }
                         if let Some(at) = at {
                             last = Last::Assistant {
                                 stop: stop.to_string(),
+                                error: message
+                                    .get("errorMessage")
+                                    .text()
+                                    .unwrap_or_default()
+                                    .to_string(),
                                 at,
                             };
                         }
@@ -107,7 +120,10 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
         let (state, since) = match last {
             Last::Nothing => (State::Idle, began?),
             Last::InFlight(at) => (State::Working, at),
-            Last::Assistant { stop, at } => (after_reply(&stop, &background), at),
+            Last::Assistant { stop, error, at } => (
+                after_reply(&stop, &error, errors_this_turn, &background),
+                at,
+            ),
         };
         Progress::Settled(state, since)
     } else {
@@ -120,11 +136,14 @@ pub fn read(content: &str, parser: &dyn JsonParser) -> Option<Session> {
     })
 }
 
-fn after_reply(stop: &str, background: &[String]) -> State {
+fn after_reply(stop: &str, error: &str, errors_this_turn: usize, background: &[String]) -> State {
     match stop {
         "stop" if background.is_empty() => State::Finished,
         "stop" => State::Working,
         "aborted" => State::Stopped,
+        "error" if error.starts_with("Retry budget exhausted") => State::Failed,
+        "error" if errors_this_turn >= 2 => State::Retrying,
+        "error" => State::Failed,
         _ => State::Busy,
     }
 }

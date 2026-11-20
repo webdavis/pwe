@@ -12,20 +12,31 @@ const ID: &str = "01a1-session";
 const SESSIONS: &str = "/home/.omp/agent/sessions/-work";
 const OWNERS: &str = "/home/.omp/run/session-owners";
 const HOLDING_THE_SESSION: &str = "omp holds the session";
+const HOLDING_NOTHING: &str = "omp holds nothing";
 
-#[derive(Default)]
-struct DiskStub {
-    files: BTreeMap<PathBuf, String>,
+#[derive(Debug, PartialEq)]
+enum DiskCall {
+    Entries(PathBuf),
+    Read(PathBuf),
 }
 
-impl DiskStub {
+#[derive(Default)]
+struct DiskSpy {
+    files: BTreeMap<PathBuf, String>,
+    calls: RefCell<Vec<DiskCall>>,
+}
+
+impl DiskSpy {
     fn add(&mut self, path: &str, content: &str) {
         self.files.insert(PathBuf::from(path), content.to_string());
     }
 }
 
-impl Disk for DiskStub {
+impl Disk for DiskSpy {
     fn entries(&self, folder: &Path) -> Vec<PathBuf> {
+        self.calls
+            .borrow_mut()
+            .push(DiskCall::Entries(folder.to_path_buf()));
         let mut found: Vec<PathBuf> = self
             .files
             .keys()
@@ -39,6 +50,9 @@ impl Disk for DiskStub {
     }
 
     fn read(&self, file: &Path) -> Option<String> {
+        self.calls
+            .borrow_mut()
+            .push(DiskCall::Read(file.to_path_buf()));
         self.files.get(file).cloned()
     }
 }
@@ -115,7 +129,7 @@ impl JsonParser for JsonParserStub {
 }
 
 struct Sut {
-    disk: DiskStub,
+    disk: DiskSpy,
     programs: ProgramsSpy,
     parser: JsonParserStub,
     home: Option<&'static Path>,
@@ -134,6 +148,12 @@ impl Sut {
 
 fn make_sut(lines: &[Tree]) -> Sut {
     let mut parser = JsonParserStub::default();
+    parser
+        .documents
+        .insert(HOLDING_THE_SESSION.to_string(), lease(&[ID]));
+    parser
+        .documents
+        .insert(HOLDING_NOTHING.to_string(), lease(&[]));
     let mut content = String::new();
     for (number, line) in lines.iter().enumerate() {
         let label = format!("line {number}");
@@ -141,7 +161,7 @@ fn make_sut(lines: &[Tree]) -> Sut {
         content.push('\n');
         parser.documents.insert(label, line.clone());
     }
-    let mut disk = DiskStub::default();
+    let mut disk = DiskSpy::default();
     disk.add(&format!("{OWNERS}/{ID}.lock"), "");
     disk.add(&session_file(), &content);
     Sut {
@@ -179,6 +199,10 @@ fn at(seconds: u64) -> Tree {
         seconds / 60 % 60,
         seconds % 60
     ))
+}
+
+fn lease(held: &[&str]) -> Tree {
+    fields([("held", Tree::List(held.iter().map(|id| text(id)).collect()))])
 }
 
 fn session_start() -> Tree {
@@ -233,6 +257,19 @@ fn a_live_session_is_listed_with_its_folder_session_and_title() {
                 .map(String::from)
                 .to_vec(),
         }]
+    );
+}
+
+#[test]
+fn a_session_omp_no_longer_holds_is_neither_listed_nor_read() {
+    let mut sut = make_sut(&[session_start(), user(2), assistant(3, "stop")]);
+    sut.programs.answer = Ok(HOLDING_NOTHING.to_string());
+    assert_eq!(sut.harness().agents(), Ok(vec![]));
+    assert!(
+        !sut.disk
+            .calls
+            .borrow()
+            .contains(&DiskCall::Read(PathBuf::from(session_file())))
     );
 }
 

@@ -6,6 +6,7 @@ use crate::disk::Disk;
 use crate::json_parser::JsonParser;
 use crate::programs::Programs;
 use agent::{Agent, Harness, State};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -24,10 +25,11 @@ impl Harness for OmpHarness<'_> {
     fn agents(&self) -> Result<Vec<Agent>, String> {
         let omp = self.home.ok_or("cannot tell the home folder")?.join(".omp");
         let ids = self.session_ids(&omp);
-        self.live(&ids)?;
+        let live = self.live(&ids)?;
         Ok(self
             .session_files(&omp)
             .into_iter()
+            .filter(|(id, _)| live.contains(id))
             .filter_map(|(id, file)| self.agent(id, &file))
             .collect())
     }
@@ -43,13 +45,22 @@ impl OmpHarness<'_> {
             .collect()
     }
 
-    fn live(&self, ids: &[String]) -> Result<(), String> {
+    fn live(&self, ids: &[String]) -> Result<HashSet<String>, String> {
         let mut arguments = vec!["session", "lease", "--json", "--"];
         arguments.extend(ids.iter().map(String::as_str));
-        self.programs
+        let answer = self
+            .programs
             .run("omp", &arguments)
             .map_err(|error| format!("cannot ask omp which sessions are live: {error}"))?;
-        Ok(())
+        let answer = self
+            .parser
+            .parse(&answer)
+            .ok_or("cannot read omp's list of live sessions".to_string())?;
+        Ok(answer
+            .get("held")
+            .items()
+            .filter_map(|id| id.text().map(str::to_string))
+            .collect())
     }
 
     fn session_files(&self, omp: &Path) -> Vec<(String, PathBuf)> {

@@ -28,3 +28,14 @@ fn a_field_that_is_not_text_has_no_text() {
         assert_eq!(document.get(name).text(), None, "{name}");
     }
 }
+
+#[test]
+fn walks_a_lists_items_in_order() {
+    let document = make_sut().parse(r#"{"held":["a","b","c"]}"#).unwrap();
+    let held: Vec<_> = document
+        .get("held")
+        .items()
+        .map(|item| item.text())
+        .collect();
+    assert_eq!(held, [Some("a"), Some("b"), Some("c")]);
+}

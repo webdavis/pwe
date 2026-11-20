@@ -22,4 +22,13 @@ impl Document for Value {
     fn text(&self) -> Option<&str> {
         self.as_str()
     }
+
+    fn items(&self) -> Box<dyn Iterator<Item = &dyn Document> + '_> {
+        Box::new(
+            self.as_array()
+                .unwrap()
+                .iter()
+                .map(|item| item as &dyn Document),
+        )
+    }
 }

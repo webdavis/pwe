@@ -26,8 +26,8 @@ impl Document for Value {
     fn items(&self) -> Box<dyn Iterator<Item = &dyn Document> + '_> {
         Box::new(
             self.as_array()
-                .unwrap()
-                .iter()
+                .into_iter()
+                .flatten()
                 .map(|item| item as &dyn Document),
         )
     }

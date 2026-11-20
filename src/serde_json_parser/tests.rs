@@ -39,3 +39,10 @@ fn walks_a_lists_items_in_order() {
         .collect();
     assert_eq!(held, [Some("a"), Some("b"), Some("c")]);
 }
+
+#[test]
+fn a_field_that_is_not_a_list_has_no_items() {
+    let document = make_sut().parse(r#"{"held":"a"}"#).unwrap();
+    assert_eq!(document.get("held").items().count(), 0);
+    assert_eq!(document.get("missing").items().count(), 0);
+}

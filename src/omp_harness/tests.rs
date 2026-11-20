@@ -19,17 +19,19 @@ const HOLDING_NOTHING: &str = "omp holds nothing";
 enum DiskCall {
     Entries(PathBuf),
     Read(PathBuf),
+    Created(PathBuf),
 }
 
 #[derive(Default)]
 struct DiskSpy {
-    files: BTreeMap<PathBuf, String>,
+    files: BTreeMap<PathBuf, (String, Option<SystemTime>)>,
     calls: RefCell<Vec<DiskCall>>,
 }
 
 impl DiskSpy {
-    fn add(&mut self, path: &str, content: &str) {
-        self.files.insert(PathBuf::from(path), content.to_string());
+    fn add(&mut self, path: &str, content: &str, created: Option<SystemTime>) {
+        self.files
+            .insert(PathBuf::from(path), (content.to_string(), created));
     }
 }
 
@@ -54,7 +56,14 @@ impl Disk for DiskSpy {
         self.calls
             .borrow_mut()
             .push(DiskCall::Read(file.to_path_buf()));
-        self.files.get(file).cloned()
+        self.files.get(file).map(|(content, _)| content.clone())
+    }
+
+    fn created(&self, file: &Path) -> Option<SystemTime> {
+        self.calls
+            .borrow_mut()
+            .push(DiskCall::Created(file.to_path_buf()));
+        self.files.get(file).and_then(|(_, created)| *created)
     }
 }
 
@@ -163,8 +172,8 @@ fn make_sut(lines: &[Tree]) -> Sut {
         parser.documents.insert(label, line.clone());
     }
     let mut disk = DiskSpy::default();
-    disk.add(&format!("{OWNERS}/{ID}.lock"), "");
-    disk.add(&session_file(), &content);
+    disk.add(&format!("{OWNERS}/{ID}.lock"), "", None);
+    disk.add(&session_file(), &content, None);
     Sut {
         disk,
         programs: ProgramsSpy {
@@ -183,6 +192,10 @@ fn state_of(sut: &Sut) -> (State, SystemTime) {
 
 fn session_file() -> String {
     format!("{SESSIONS}/2026-11-19T10-00-00-000Z_{ID}.jsonl")
+}
+
+fn session_folder() -> String {
+    format!("{SESSIONS}/2026-11-19T10-00-00-000Z_{ID}")
 }
 
 fn time(seconds: u64) -> SystemTime {
@@ -344,7 +357,8 @@ fn a_session_omp_no_longer_holds_is_neither_listed_nor_read() {
 fn an_advisor_session_is_not_an_agent() {
     let mut sut = make_sut(&[]);
     sut.disk = DiskSpy::default();
-    sut.disk.add(&format!("{OWNERS}/{ID}__advisor.lock"), "");
+    sut.disk
+        .add(&format!("{OWNERS}/{ID}__advisor.lock"), "", None);
     assert_eq!(sut.harness().agents(), Ok(vec![]));
     assert!(sut.programs.runs.borrow().is_empty());
 }
@@ -457,6 +471,25 @@ fn a_question_waiting_on_the_owner_needs_you_with_its_text() {
             time(3)
         )
     );
+}
+
+#[test]
+fn a_command_or_subagent_is_working_once_its_output_file_appears_and_busy_before() {
+    for (tool, output_file) in [
+        ("bash", format!("{}/local/0.log", session_folder())),
+        ("eval", format!("{}/local/0.log", session_folder())),
+        ("task", format!("{}/Scout.jsonl", session_folder())),
+    ] {
+        let mut sut = make_sut(&[
+            session_start(),
+            user(2),
+            tool_start(3, "c1", tool, "Running"),
+        ]);
+        sut.disk.add(&output_file, "", Some(time(2)));
+        assert_eq!(state_of(&sut), (State::Busy, time(3)), "{tool}");
+        sut.disk.add(&output_file, "", Some(time(3)));
+        assert_eq!(state_of(&sut), (State::Working, time(3)), "{tool}");
+    }
 }
 
 #[test]

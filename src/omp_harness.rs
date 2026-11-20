@@ -86,7 +86,7 @@ impl OmpHarness<'_> {
         let session = session::read(&self.disk.read(file)?, self.parser)?;
         let (state, since) = match session.progress {
             Progress::Settled(state, since) => (state, since),
-            Progress::Waiting(calls) => self.waiting(&calls),
+            Progress::Waiting(calls) => self.waiting(&calls, &file.with_extension("")),
         };
         let mut agent = Agent::new(session.folder, state, since);
         agent.session = Some(id);
@@ -94,7 +94,7 @@ impl OmpHarness<'_> {
         Some(agent)
     }
 
-    fn waiting(&self, calls: &[Call]) -> (State, SystemTime) {
+    fn waiting(&self, calls: &[Call], outputs: &Path) -> (State, SystemTime) {
         let since = calls
             .iter()
             .map(|call| call.started)
@@ -105,8 +105,22 @@ impl OmpHarness<'_> {
                 kind: Some("question".to_string()),
                 text: question.intent.clone(),
             },
+            None if calls.iter().all(|call| self.is_running(call, outputs)) => State::Working,
             None => State::Busy,
         };
         (state, since)
+    }
+
+    fn is_running(&self, call: &Call, outputs: &Path) -> bool {
+        let folder = match call.tool.as_str() {
+            "bash" | "eval" => outputs.join("local"),
+            "task" => outputs.to_path_buf(),
+            _ => return false,
+        };
+        self.disk.entries(&folder).iter().any(|file| {
+            self.disk
+                .created(file)
+                .is_some_and(|created| created >= call.started)
+        })
     }
 }

@@ -1,8 +1,11 @@
 mod agent_command;
 mod agent_view;
 mod command;
+mod disk;
 mod document;
 mod json_parser;
+mod omp_harness;
+mod programs;
 mod rex_command;
 mod rex_config;
 mod serde_json_parser;

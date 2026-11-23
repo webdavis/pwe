@@ -1,0 +1,72 @@
+direction: down
+style.fill: "#0d1117"
+classes: {
+  package: {
+    style: {fill: transparent; stroke: "#8b949e"; stroke-dash: 5; border-radius: 30; font-color: "#c9d1d9"}
+  }
+  trait: {
+    style: {fill: "#0d1117"; stroke: "#c084fc"; font-color: "#c084fc"; stroke-width: 1; font: mono; bold: false}
+  }
+  type: {
+    style: {fill: "#0d1117"; stroke: "#38bdf8"; font-color: "#38bdf8"; stroke-width: 1; font: mono; bold: false}
+  }
+  function: {
+    shape: oval
+    style: {fill: "#0d1117"; stroke: "#fb923c"; font-color: "#fb923c"; stroke-width: 1; font: mono; bold: false}
+  }
+  data: {
+    style: {fill: "#0d1117"; stroke: "#22c55e"; font-color: "#22c55e"; stroke-width: 1; font: mono; bold: false}
+  }
+  builder: {
+    style: {fill: "#0d1117"; stroke: "#c9d1d9"; font-color: "#c9d1d9"; stroke-width: 1; font: mono; bold: false}
+  }
+  uses: {
+    style: {stroke: "#8b949e"; stroke-width: 1; font-color: "#8b949e"}
+  }
+  implements: {
+    style: {stroke: "#8b949e"; stroke-width: 1; stroke-dash: 6; font-color: "#8b949e"}
+    target-arrowhead: {shape: triangle; style.filled: false}
+  }
+}
+
+program: "pwe: the program package, at the repo root" {
+  class: package
+  main: "main.rs" {class: builder}
+  commands: "Commands\nhands words to a noun" {class: type}
+  command: "<Command>\none per noun" {class: trait}
+  rex_command: "RexCommand" {class: type}
+  agent_command: "AgentCommand" {class: type}
+  agent_view: "agent_view()\npresentation" {class: function}
+  omp_harness: "OmpHarness\nomp's paths and rules" {class: type}
+  rex_source: "RexStatusSource\nlater" {class: type}
+  local_disk: "LocalDisk" {class: type}
+  disk: "<Disk>\ndumb reader" {class: trait}
+  programs: "<Programs>\ndumb reader" {class: trait}
+  local_programs: "LocalPrograms" {class: type}
+}
+
+core: "engines/agent: the core package" {
+  class: package
+  list: "list()\njoins the best answers" {class: function}
+  listing: "Listing\nagents and failures" {class: data}
+  agent: "Agent, State" {class: data}
+  harness: "<Harness>\none agent program" {class: trait}
+  status_source: "<StatusSource>\nextra state source" {class: trait}
+}
+
+program.commands -> program.command: "uses" {class: uses}
+program.rex_command -> program.command: "implements" {class: implements}
+program.agent_command -> program.command: "implements" {class: implements}
+program.agent_command -> program.agent_view: "shows with" {class: uses}
+program.agent_view -> core.listing: "reads" {class: uses}
+program.omp_harness -> core.harness: "implements" {class: implements}
+program.rex_source -> core.status_source: "implements" {class: implements}
+program.omp_harness -> program.disk: "reads" {class: uses}
+program.omp_harness -> program.programs: "runs" {class: uses}
+program.local_disk -> program.disk: "implements" {class: implements}
+program.local_programs -> program.programs: "implements" {class: implements}
+core.list -> core.listing: "returns" {class: uses}
+core.list -> core.harness: "asks" {class: uses}
+core.listing -> core.agent: "holds" {class: uses}
+program.agent_command -> core.listing: "gets" {class: uses}
+core.list -> core.status_source: "asks" {class: uses}

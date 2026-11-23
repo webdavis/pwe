@@ -1,6 +1,6 @@
 check:
     scripts/verify-no-comments.sh
-    shasum -a 256 -c --status docs/architecture.sha256 || { echo "docs/architecture.json changed: run just diagram"; false; }
+    shasum -a 256 -c --status docs/architecture.sha256 || { echo "docs/architecture.d2 changed: run just diagram"; false; }
     cargo fmt --check
     cargo clippy --all-targets -- -D warnings
     cargo test --lib --bins

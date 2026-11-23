@@ -2,13 +2,9 @@
 
 set -e
 
-archify="${ARCHIFY:-$HOME/.omp/agent/skills/archify/bin/archify.mjs}"
+d2 --layout elk --sketch \
+  --elk-nodeNodeBetweenLayers 90 \
+  --elk-edgeNodeBetweenLayers 50 \
+  docs/architecture.d2 docs/architecture.png
 
-rm -rf .archify
-
-node "$archify" finalize architecture docs/architecture.json .archify/architecture.html --quality showcase
-node "$archify" visual-check .archify/architecture.html --summary --require-provenance --out-dir .archify/visual-check
-
-cp .archify/visual-check/architecture.visual-check.2048x1320.dark.png docs/architecture.png
-
-shasum -a 256 docs/architecture.json >docs/architecture.sha256
+shasum -a 256 docs/architecture.d2 >docs/architecture.sha256

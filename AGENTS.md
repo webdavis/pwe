@@ -18,7 +18,7 @@
 
 ## Design
 
-- `docs/architecture.md` holds the design and the order of the next features. Read it before you start a feature or change a package, trait or command. Update it, and its diagram in `docs/architecture.json`, in the pull request that changes the design; `just diagram` redraws the picture.
+- `docs/architecture.md` holds the design and the order of the next features. Read it before you start a feature or change a package, trait or command. Update it, and its diagram in `docs/architecture.d2`, in the pull request that changes the design; `just diagram` redraws the picture with the `d2` program.
 - `docs/agent-states.md` holds the tested evidence of what each agent program reports. Read it before you write code that reads an agent's state.
 - Only `main.rs` names a type that touches the disk, runs a program or reads the clock. Other code is handed a trait or a value.
 - Write no comments, doc comments included. Names and structure are the documentation; when code needs explaining, rename or restructure it.

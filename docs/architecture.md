@@ -2,7 +2,7 @@
 
 ![The design](architecture.png)
 
-The picture is drawn from `docs/architecture.json`. `<Name>` is a trait. `name()` is a plain function.
+The picture is drawn from `docs/architecture.d2` with the `d2` program. Purple is a trait, blue a type, green data, orange a plain function, and white `main.rs`, which builds the real types. A dashed arrow with a hollow head means "implements".
 
 ## Packages
 
